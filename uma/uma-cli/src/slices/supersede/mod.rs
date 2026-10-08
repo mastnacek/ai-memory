@@ -2,6 +2,7 @@ use anyhow::Result;
 use clap::Args;
 use std::io::{self, Read};
 use std::str::FromStr;
+use uma_core::secrets;
 use uma_core::{
     domain::{Fact, FactId, FactType},
     store::Store,
@@ -106,6 +107,29 @@ pub fn run(args: SupersedeArgs) -> Result<()> {
         Some(raw) => parse_datetime_or_date(&raw)?,
         None => old_fact.validity.since,
     };
+
+    {
+        let text = [
+            new_fact.title.as_str(),
+            new_fact.body.as_str(),
+            new_fact.description.as_deref().unwrap_or(""),
+            new_fact.template.as_deref().unwrap_or(""),
+        ]
+        .join("
+");
+        let literals: Vec<String> = secrets::env_secret_literals(&std::env::vars().collect::<Vec<_>>());
+        let findings = secrets::scan(&text, &literals);
+        if secrets::is_blocked(&findings) {
+            let list = findings
+                .iter()
+                .map(|f| format!("{} ({})", f.label, f.preview))
+                .collect::<Vec<_>>()
+                .join(", ");
+            anyhow::bail!(
+                "Refusing to save: the revision contains what looks like {list}. Memory is re-injected                  into every session and may be committed — never store credentials."
+            );
+        }
+    }
 
     let store = get_store(&scope)?;
     let created = store.supersede(&old_id, new_fact)?;

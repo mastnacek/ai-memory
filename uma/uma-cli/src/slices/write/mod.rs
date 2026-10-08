@@ -2,6 +2,7 @@ use anyhow::Result;
 use clap::Args;
 use std::io::{self, Read};
 use std::str::FromStr;
+use uma_core::secrets;
 use uma_core::domain::{Fact, FactType};
 
 use crate::shared::{parse::parse_datetime_or_date, scope::resolve_scope, store_helper::get_store};
@@ -72,9 +73,32 @@ pub fn run(args: WriteArgs) -> Result<()> {
         fact.validity.since = parse_datetime_or_date(raw)?;
     }
 
+    refuse_secrets(&fact.title, &fact.body, fact.description.as_deref(), fact.template.as_deref())?;
+
     let store = get_store(&fact.scope)?;
     store.write(&fact)?;
     println!("Created fact: {}", fact.id);
+    Ok(())
+}
+
+/// Refuses the write when any text field carries a credential. Memory files
+/// are re-injected into every future session and may be committed to git — a
+/// leaked key is unrecoverable, so this fails closed.
+fn refuse_secrets(title: &str, body: &str, description: Option<&str>, template: Option<&str>) -> Result<()> {
+    let text = [title, body, description.unwrap_or(""), template.unwrap_or("")].join("
+");
+    let literals: Vec<String> = secrets::env_secret_literals(&std::env::vars().collect::<Vec<_>>());
+    let findings = secrets::scan(&text, &literals);
+    if secrets::is_blocked(&findings) {
+        let list = findings
+            .iter()
+            .map(|f| format!("{} ({})", f.label, f.preview))
+            .collect::<Vec<_>>()
+            .join(", ");
+        anyhow::bail!(
+            "Refusing to save: the fact contains what looks like {list}. Memory is re-injected into              every session and may be committed — never store credentials. Rephrase without the              secret (name the env var that holds it instead)."
+        );
+    }
     Ok(())
 }
 

@@ -4,6 +4,7 @@ pub mod embeddings;
 pub mod health;
 pub mod indexer;
 pub mod search;
+pub mod secrets;
 pub mod serialization;
 pub mod sources;
 pub mod similarity;
