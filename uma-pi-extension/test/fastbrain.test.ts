@@ -108,20 +108,23 @@ test("no-trigger and zero-fact verdicts list no facts", () => {
   assert.ok(!formatGateDecision("why?", verdict([]), "en").includes("\n   1."));
 });
 
-import { buildTranslateMessages } from "../src/slices/translate/prompt.ts";
+import { buildTranslateContext } from "../src/slices/translate/prompt.ts";
 import { stringsFor } from "../src/shared/i18n.ts";
 import { renderProposalView } from "../src/shared/modal_renderer.ts";
 import { visibleWidth } from "@earendil-works/pi-tui";
 
-test("translate prompt pins the preservation contract", () => {
-  const msgs = buildTranslateMessages("## Rule\n- use ULID 01M4DQ9C37YR0J7ZG358DQQA6F");
-  assert.equal(msgs.length, 2);
-  assert.equal(msgs[0].role, "system");
-  assert.ok(msgs[0].content.includes("ULID"));
-  assert.ok(msgs[0].content.includes("#tag"));
-  assert.ok(msgs[0].content.includes("Translate only the prose"));
-  assert.equal(msgs[1].role, "user");
-  assert.equal(msgs[1].content, "## Rule\n- use ULID 01M4DQ9C37YR0J7ZG358DQQA6F");
+test("translate context is a real Context, not a bare array", () => {
+  const ctx = buildTranslateContext("## Rule\n- use ULID 01M4DQ9C37YR0J7ZG358DQQA6F");
+  // A bare message array (or a timestamp-less message) passes a cast but
+  // fails the real Message contract — the bug that made translation
+  // silently unavailable.
+  assert.ok(Array.isArray(ctx.messages) && ctx.messages.length === 1);
+  assert.ok(ctx.systemPrompt.includes("ULID"));
+  assert.ok(ctx.systemPrompt.includes("#tag"));
+  assert.ok(ctx.systemPrompt.includes("Translate only the prose"));
+  assert.equal(ctx.messages[0].role, "user");
+  assert.equal(ctx.messages[0].content, "## Rule\n- use ULID 01M4DQ9C37YR0J7ZG358DQQA6F");
+  assert.ok(typeof ctx.messages[0].timestamp === "number");
 });
 
 const demoTheme = { fg: (_c: string, t: string) => t, bg: (_c: string, t: string) => t, bold: (t: string) => t } as any;

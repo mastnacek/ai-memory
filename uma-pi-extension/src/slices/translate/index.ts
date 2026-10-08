@@ -7,12 +7,12 @@
  * slice; folding the translated body back into the proposal would
  * silently change what gets saved (the modal round-trip lesson).
  */
-import type { Api, AssistantMessage, Model } from "@earendil-works/pi-ai";
+import type { Api, AssistantMessage, Context, Model } from "@earendil-works/pi-ai";
 import { completeSimple } from "@earendil-works/pi-ai/compat";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 
-import { buildTranslateMessages } from "./prompt.js";
-export { buildTranslateMessages };
+import { buildTranslateContext } from "./prompt.js";
+export { buildTranslateContext };
 
 export interface DisplayTranslationResult {
   /** Translated markdown; undefined when translation failed or was skipped. */
@@ -65,17 +65,17 @@ export async function translateForDisplay(
       | {
           completeSimple?: (
             m: Model<Api>,
-            context: never,
-            options?: never,
+            context: Context,
+            options?: unknown,
           ) => Promise<AssistantMessage>;
           complete?: (
             m: Model<Api>,
-            context: never,
-            options?: never,
+            context: Context,
+            options?: unknown,
           ) => Promise<AssistantMessage>;
         }
       | undefined;
-    const context = buildTranslateMessages(body) as never;
+    const context = buildTranslateContext(body);
     if (registry && typeof registry.completeSimple === "function") {
       return extract(await registry.completeSimple(model, context, opts));
     }
