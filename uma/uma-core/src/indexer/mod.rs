@@ -15,13 +15,11 @@ mod tests;
 /// `index.db` stores and what this build expects.
 pub const FTS_SCHEMA_VERSION: i64 = 2;
 
-
 pub struct Indexer {
     conn: Connection,
     #[allow(dead_code)]
     db_path: PathBuf,
 }
-
 
 impl Indexer {
     /// Opens or creates the centralized SQLite index database.

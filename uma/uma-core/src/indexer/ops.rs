@@ -180,5 +180,4 @@ impl Indexer {
 
         Ok(missing.len())
     }
-
 }

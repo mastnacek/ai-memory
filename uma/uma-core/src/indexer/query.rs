@@ -1,6 +1,6 @@
 //! FTS5 query construction and scope parsing.
 
-use crate::domain::{Scope};
+use crate::domain::Scope;
 
 /// Builds a prefix-match FTS5 query from free-form user input.
 pub fn build_fts_query(query: &str) -> String {
@@ -40,4 +40,3 @@ pub fn parse_scope_str(s: &str) -> Scope {
         Scope::Project(s.to_string())
     }
 }
-
