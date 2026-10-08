@@ -52,8 +52,7 @@ pub fn ensure_repo(dir: &Path) -> Result<RepoInit> {
             identity: None,
         });
     }
-    std::fs::create_dir_all(dir)
-        .with_context(|| format!("failed to create {}", dir.display()))?;
+    std::fs::create_dir_all(dir).with_context(|| format!("failed to create {}", dir.display()))?;
 
     if run(dir, &["init", "-b", "main"]).is_err() {
         run(dir, &["init"])?;
@@ -119,12 +118,15 @@ pub fn remote(dir: &Path) -> Option<String> {
 }
 
 pub fn upstream(dir: &Path) -> Option<String> {
-    run(dir, &[
-        "rev-parse",
-        "--abbrev-ref",
-        "--symbolic-full-name",
-        "@{upstream}",
-    ])
+    run(
+        dir,
+        &[
+            "rev-parse",
+            "--abbrev-ref",
+            "--symbolic-full-name",
+            "@{upstream}",
+        ],
+    )
     .ok()
     .map(|s| s.trim().to_string())
 }
@@ -177,12 +179,10 @@ pub fn last_commit(dir: &Path) -> Option<String> {
 
 /// `(ahead, behind)` against the upstream branch.
 pub fn ahead_behind(dir: &Path) -> Option<(usize, usize)> {
-    let out = run(dir, &[
-        "rev-list",
-        "--left-right",
-        "--count",
-        "@{upstream}...HEAD",
-    ])
+    let out = run(
+        dir,
+        &["rev-list", "--left-right", "--count", "@{upstream}...HEAD"],
+    )
     .ok()?;
     let mut parts = out.split_whitespace();
     let behind = parts.next()?.parse().ok()?;
@@ -197,7 +197,10 @@ pub fn clone(url: &Path, path: &Path) -> Result<String> {
     let parent = path
         .parent()
         .context("clone destination has no parent directory")?;
-    run(parent, &["clone", &url.to_string_lossy(), &path.to_string_lossy()])
+    run(
+        parent,
+        &["clone", &url.to_string_lossy(), &path.to_string_lossy()],
+    )
 }
 
 /// Markdown files that still contain unresolved conflict markers.
@@ -210,12 +213,10 @@ pub fn scan_conflict_markers(root: &Path) -> Vec<PathBuf> {
         .into_iter()
         .flatten()
         .filter(|entry| {
-            entry.file_type().is_file()
-                && entry.path().extension().is_some_and(|x| x == "md")
+            entry.file_type().is_file() && entry.path().extension().is_some_and(|x| x == "md")
         })
         .filter(|entry| {
-            std::fs::read_to_string(entry.path())
-                .is_ok_and(|content| has_marker(&content))
+            std::fs::read_to_string(entry.path()).is_ok_and(|content| has_marker(&content))
         })
         .map(|entry| entry.path().to_path_buf())
         .collect()
@@ -267,7 +268,10 @@ mod tests {
         let hash = commit(&root, "test commit")?;
         assert!(hash.is_some());
         assert!(has_commits(&root));
-        assert!(changes(&root).is_empty(), "tree should be clean after commit");
+        assert!(
+            changes(&root).is_empty(),
+            "tree should be clean after commit"
+        );
 
         std::fs::remove_file(&fact)?;
         run(&root, &["add", "-A", "."])?;

@@ -32,7 +32,10 @@ fn two_machines(dir: &Path) -> Result<(PathBuf, PathBuf, PathBuf)> {
         origin.parent().unwrap(),
         &["init", "--bare", "-b", "main", &origin.to_string_lossy()],
     )?;
-    git::run(&machine_a, &["remote", "add", "origin", &origin.to_string_lossy()])?;
+    git::run(
+        &machine_a,
+        &["remote", "add", "origin", &origin.to_string_lossy()],
+    )?;
     push_at(&machine_a, None)?;
     git::clone(&origin, &machine_b)?;
     Ok((origin, machine_a, machine_b))
@@ -180,7 +183,10 @@ fn test_push_never_tracks_the_search_cache() -> Result<()> {
 
     let report = push_at(&root, None)?;
 
-    assert!(!git::is_tracked(&root, "index.db"), "cache must stay untracked");
+    assert!(
+        !git::is_tracked(&root, "index.db"),
+        "cache must stay untracked"
+    );
     assert!(root.join(".gitignore").exists());
     assert!(report
         .housekeeping
@@ -189,9 +195,12 @@ fn test_push_never_tracks_the_search_cache() -> Result<()> {
     // Everything that *is* published must be a fact document or the ignore
     // file itself; the cache must never appear.
     let tracked = git::run(&root, &["ls-files"])?;
-    assert!(tracked
-        .lines()
-        .all(|p| p.ends_with(".md") || p == ".gitignore"), "{tracked}");
+    assert!(
+        tracked
+            .lines()
+            .all(|p| p.ends_with(".md") || p == ".gitignore"),
+        "{tracked}"
+    );
     Ok(())
 }
 
@@ -204,7 +213,10 @@ fn test_push_untracks_a_cache_an_older_version_committed() -> Result<()> {
     git::ensure_repo(&root)?;
     git::run(&root, &["add", "-A", "."])?;
     git::commit(&root, "old build committed the cache")?;
-    assert!(git::is_tracked(&root, "index.db"), "setup: cache is tracked");
+    assert!(
+        git::is_tracked(&root, "index.db"),
+        "setup: cache is tracked"
+    );
 
     let report = push_at(&root, None)?;
 
@@ -213,6 +225,9 @@ fn test_push_untracks_a_cache_an_older_version_committed() -> Result<()> {
         .iter()
         .any(|item| item.contains("untracked")));
     assert!(!git::is_tracked(&root, "index.db"));
-    assert!(root.join("index.db").exists(), "the file itself stays on disk");
+    assert!(
+        root.join("index.db").exists(),
+        "the file itself stays on disk"
+    );
     Ok(())
 }

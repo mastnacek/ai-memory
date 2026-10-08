@@ -134,7 +134,9 @@ pub fn pull_at(root: &Path) -> Result<PullReport> {
     if !git::has_remote_branch(root, &remote_name, &branch) {
         let mut report = empty_report();
         report.outcome = PullOutcome::NoRemoteBranch;
-        report.note = Some(format!("remote {remote_name} has no {branch} branch; nothing to pull"));
+        report.note = Some(format!(
+            "remote {remote_name} has no {branch} branch; nothing to pull"
+        ));
         return Ok(report);
     }
     let remote_ref = format!("{remote_name}/{branch}");
@@ -156,8 +158,9 @@ pub fn pull_at(root: &Path) -> Result<PullReport> {
         if behind == 0 {
             let mut report = empty_report();
             report.outcome = PullOutcome::UpToDate;
-            report.note =
-                Some(format!("in sync with {remote_ref} ({ahead} unpushed commit(s))"));
+            report.note = Some(format!(
+                "in sync with {remote_ref} ({ahead} unpushed commit(s))"
+            ));
             return Ok(report);
         }
     }
@@ -198,4 +201,3 @@ pub fn status_at(root: &Path) -> Result<StatusReport> {
         last_commit: git::last_commit(root),
     })
 }
-
