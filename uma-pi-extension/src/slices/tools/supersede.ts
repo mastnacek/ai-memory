@@ -1,9 +1,10 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Type } from "typebox";
-import type { ExtensionState } from "../../shared/types.js";
-import { executeUma } from "../../shared/client.js";
+import type { ExtensionState, MemoryProposal } from "../../shared/types.js";
+import { executeUma, readFactJson } from "../../shared/client.js";
+import { showProposalModal } from "../../shared/modal.js";
 
-export function registerSupersedeTool(pi: ExtensionAPI, _state: ExtensionState): void {
+export function registerSupersedeTool(pi: ExtensionAPI, state: ExtensionState): void {
   pi.registerTool({
     name: "uma_supersede",
     label: "UMA Supersede",
@@ -27,11 +28,39 @@ export function registerSupersedeTool(pi: ExtensionAPI, _state: ExtensionState):
       ),
     }),
     execute: async (_toolCallId, params, _signal, _onUpdate, ctx) => {
-      const args = ["supersede", params.oldId, "--title", params.title, "--body", params.body];
+      // Resolve the predecessor so the modal shows its real type/scope/tags and
+      // so omitted arguments inherit from it, matching the CLI's behaviour.
+      const predecessor = await readFactJson(ctx.cwd, params.oldId);
+
+      const proposal: MemoryProposal = {
+        title: params.title,
+        body: params.body,
+        type: params.type || predecessor?.type || "note",
+        scope: params.scope || predecessor?.scope || "project",
+        tags: params.tags && params.tags.length > 0 ? params.tags : predecessor?.tags ?? [],
+        supersedes: params.oldId,
+      };
+
+      // Same approval contract as uma_write: review the revision before it is stored.
+      let approved = proposal;
+      if (!state.config.autoApprove && ctx.mode === "tui" && ctx.hasUI) {
+        const result = await showProposalModal(ctx, proposal, state.config.lang);
+        if (result.action === "rejected") {
+          return {
+            content: [
+              { type: "text", text: "Supersede proposal was cancelled/rejected by the user." },
+            ],
+            details: { rejected: true },
+          };
+        }
+        approved = result.proposal;
+      }
+
+      const args = ["supersede", params.oldId, "--title", approved.title, "--body", approved.body];
       if (params.description) args.push("--desc", params.description);
-      if (params.type) args.push("--type", params.type);
-      if (params.scope) args.push("--scope", params.scope);
-      if (params.tags && params.tags.length > 0) args.push("--tags", params.tags.join(","));
+      if (approved.type) args.push("--type", approved.type);
+      if (approved.scope) args.push("--scope", approved.scope);
+      if (approved.tags.length > 0) args.push("--tags", approved.tags.join(","));
       return executeUma(ctx.cwd, args);
     },
   });

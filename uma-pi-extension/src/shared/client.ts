@@ -44,6 +44,62 @@ export function runUma(
   });
 }
 
+export interface FactSummary {
+  id: string;
+  title: string;
+  type: string;
+  scope: string;
+  tags: string[];
+}
+
+/**
+ * Reads a fact via `uma read --json` so callers get its real type/scope/tags.
+ * Returns `undefined` when the fact cannot be read.
+ */
+export async function readFactJson(cwd: string, id: string): Promise<FactSummary | undefined> {
+  const binPath = findUmaBinary(cwd);
+  try {
+    const result = await runUma(binPath, ["read", id, "--json"], cwd);
+    if (result.code !== 0) return undefined;
+    const raw = JSON.parse(result.stdout) as {
+      id: string;
+      title: string;
+      fact_type: unknown;
+      scope: unknown;
+      tags?: string[];
+    };
+    return {
+      id: raw.id,
+      title: raw.title,
+      type: enumValue(raw.fact_type),
+      scope: scopeValue(raw.scope),
+      tags: raw.tags ?? [],
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+/** Unwraps a Rust enum: `"Preference"` or `{ "Custom": "cst" }` -> `"preference"` / `"cst"`. */
+function enumValue(value: unknown): string {
+  if (typeof value === "string") return value.toLowerCase();
+  if (value && typeof value === "object") {
+    const inner = Object.values(value as Record<string, unknown>)[0];
+    if (typeof inner === "string") return inner.toLowerCase();
+  }
+  return "note";
+}
+
+/** Unwraps the scope enum: `"Global"` -> `"global"`, `{ "Project": "x" }` -> `"x"`. */
+function scopeValue(value: unknown): string {
+  if (value === "Global") return "global";
+  if (value && typeof value === "object") {
+    const inner = (value as Record<string, unknown>).Project;
+    if (typeof inner === "string" && inner.length > 0) return inner;
+  }
+  return "project";
+}
+
 export async function executeUma(
   cwd: string,
   args: string[],

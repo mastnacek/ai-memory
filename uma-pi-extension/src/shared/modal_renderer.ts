@@ -73,6 +73,11 @@ export function renderProposalView(opts: ModalRenderOptions): string[] {
       ? proposal.tags.map((t) => theme.fg("accent", "#" + t)).join(" ")
       : theme.fg("dim", "(žádné tagy)");
   rawLines.push(`  ${theme.fg("muted", "🏷️  " + s.tagsLabel + ":")} ${tagsDisplay}`);
+  if (proposal.supersedes) {
+    rawLines.push(
+      `  ${theme.fg("muted", "⤴  " + s.supersedesLabel + ":")} ${theme.fg("warning", proposal.supersedes)}`
+    );
+  }
   rawLines.push("");
 
   // 3. Title Box

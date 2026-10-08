@@ -31,6 +31,7 @@ export interface Strings {
   descUmaCommand: string;
   scopeGlobal: string;
   scopeProject: string;
+  supersedesLabel: string;
 }
 
 const STRINGS: Record<Locale, Strings> = {
@@ -64,6 +65,7 @@ const STRINGS: Record<Locale, Strings> = {
     descUmaCommand: "Universal Memory Architecture (UMA) manager",
     scopeGlobal: "Global (all projects)",
     scopeProject: "Project",
+    supersedesLabel: "Supersedes",
   },
   cs: {
     proposalHeader: "🧠 UMA • Návrh zápisu do paměti",
@@ -95,6 +97,7 @@ const STRINGS: Record<Locale, Strings> = {
     descUmaCommand: "Správa paměťového systému UMA",
     scopeGlobal: "Globální (všechny projekty)",
     scopeProject: "Projekt",
+    supersedesLabel: "Nahrazuje",
   },
 };
 

@@ -4,6 +4,8 @@ export interface MemoryProposal {
   type: string;
   scope: string;
   tags: string[];
+  /** ULID of the fact this proposal replaces, when superseding. */
+  supersedes?: string;
 }
 
 export interface ProposalResult {
