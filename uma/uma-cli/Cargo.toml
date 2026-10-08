@@ -15,3 +15,7 @@ serde_json.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
+# Canonical binary name: docs, skills, and agent prompts all say `uma ...`.
+[[bin]]
+name = "uma"
+path = "src/main.rs"

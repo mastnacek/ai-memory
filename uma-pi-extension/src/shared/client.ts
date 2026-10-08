@@ -4,17 +4,22 @@ import * as fs from "node:fs";
 
 export function findUmaBinary(cwd: string): string {
   const isWindows = process.platform === "win32";
-  const exeName = isWindows ? "uma-cli.exe" : "uma-cli";
+  // The canonical binary is `uma` (Cargo.toml [[bin]]); `uma-cli` is kept as a
+  // fallback for stale installs built before the rename.
+  const primary = isWindows ? "uma.exe" : "uma";
+  const fallback = isWindows ? "uma-cli.exe" : "uma-cli";
 
   const candidates = [
-    path.join(cwd, "uma", "target", "release", exeName),
-    path.join(cwd, "uma", "target", "debug", exeName),
-    path.join(__dirname, "..", "..", "..", "uma", "target", "release", exeName),
-    path.join(__dirname, "..", "..", "..", "uma", "target", "debug", exeName),
-    path.join(__dirname, "..", "..", "target", "release", exeName),
-    path.join(__dirname, "..", "..", "target", "debug", exeName),
-    isWindows ? "uma-cli.exe" : "uma-cli",
-    "uma",
+    path.join(cwd, "uma", "target", "release", primary),
+    path.join(cwd, "uma", "target", "debug", primary),
+    path.join(__dirname, "..", "..", "..", "uma", "target", "release", primary),
+    path.join(__dirname, "..", "..", "..", "uma", "target", "debug", primary),
+    path.join(__dirname, "..", "..", "target", "release", primary),
+    path.join(__dirname, "..", "..", "target", "debug", primary),
+    path.join(cwd, "uma", "target", "release", fallback),
+    path.join(cwd, "uma", "target", "debug", fallback),
+    primary,
+    fallback,
   ];
 
   for (const candidate of candidates) {
@@ -23,7 +28,7 @@ export function findUmaBinary(cwd: string): string {
     }
   }
 
-  return isWindows ? "uma-cli.exe" : "uma-cli";
+  return primary;
 }
 
 export function runUma(

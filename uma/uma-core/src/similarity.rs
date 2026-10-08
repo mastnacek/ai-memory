@@ -13,6 +13,11 @@ const STOPWORDS: &[&str] = &[
     "should", "must", "may", "use", "using", "used", "into", "over", "than", "then", "they",
     "them", "these", "those", "one", "two", "how", "why", "what", "when", "where", "which", "who",
     "also", "only", "more", "most", "such", "each", "other", "some", "very",
+    // Czech: the import pipeline is Czech-heavy, and without these the
+    // flexion-heavy function words dominate token overlap.
+    "nebo", "také", "taky", "jak", "když", "aby", "proto", "tento", "tato",
+    "toto", "tuto", "tohle", "který", "která", "které", "jen", "pak", "ještě",
+    "však", "právě", "jenže", "až", "už", "tedy", "protože",
 ];
 
 /// Markers that flip a statement's polarity. Matching is done against the raw
@@ -35,6 +40,15 @@ const NEGATION_MARKERS: &[&str] = &[
     "refuse",
     "instead of",
     "rather than",
+    // Czech negation is a prefix on the verb ("nepoužívat"), so no fixed
+    // marker list can catch it; has_negation adds a word-level rule below.
+    "nikdy",
+    "nesmí",
+    "nesmi",
+    "bez ",
+    "zakázané",
+    "zakázaný",
+    "zakaz",
 ];
 
 /// Strips a few common English suffixes so "installs" and "installation" collapse
@@ -76,7 +90,16 @@ pub fn jaccard(a: &[String], b: &[String]) -> f64 {
 /// True when the text carries an explicit negation marker.
 pub fn has_negation(text: &str) -> bool {
     let lower = text.to_lowercase();
-    NEGATION_MARKERS.iter().any(|marker| lower.contains(marker))
+    if NEGATION_MARKERS.iter().any(|marker| lower.contains(marker)) {
+        return true;
+    }
+    // Czech "ne-" prefix on any word: "nepoužívat" negates just as "do not
+    // use" does. Requires a 3+ character remainder so words like "nebo" (but)
+    // or "není" contractions don't trip it spuriously... "nebo" is 4 — but it
+    // is a stopword-sized connector, not a negated verb, hence the length bar.
+    lower
+        .split(|c: char| !c.is_alphanumeric())
+        .any(|word| word.len() >= 5 && word.starts_with("ne"))
 }
 
 #[cfg(test)]
@@ -110,5 +133,25 @@ mod tests {
         assert!(has_negation("Do not use pnpm for dependency installs"));
         assert!(has_negation("Never install dependencies with npm"));
         assert!(has_negation("Avoid global installs"));
+    }
+
+    #[test]
+    fn test_czech_negation_is_detected_but_connectors_are_not() {
+        // The review's scenario: two Czech rules differing only in negation
+        // must read as opposites, not as near-duplicates.
+        assert!(has_negation("Nikdy nepoužívat npm v tomto repozitáři"));
+        assert!(has_negation("Nepoužívat npm"));
+        assert!(!has_negation("Vždy používat pnpm"));
+        // "nebo" (or) starts with "ne" but is a connector, not a negation.
+        assert!(!has_negation("Používat pnpm nebo npm"));
+    }
+
+    #[test]
+    fn test_czech_stopwords_do_not_dominate_overlap() {
+        // Flexion-heavy function words must not inflate similarity between
+        // unrelated Czech claims.
+        let a = tokenize("Vždy používat pnpm v tomto repozitáři pro instalace");
+        let b = tokenize("Nikdy neupravovat vygenerované soubory v tomto repozitáři");
+        assert!(jaccard(&a, &b) < 0.55, "unrelated Czech rules must not merge");
     }
 }

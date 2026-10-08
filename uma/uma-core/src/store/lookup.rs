@@ -25,6 +25,27 @@ pub struct ScopeSummary {
     pub facts: usize,
 }
 
+/// Resolves a foreign project's store root from indexed `file_path` values.
+///
+/// Walks an indexed fact path's ancestors to the directory named `.uma` — that
+/// directory *is* the project's store. Returns `None` when the index holds no
+/// files for the project (deleted or never-indexed). Takes a connection so it
+/// is testable against a throwaway index.
+pub fn store_root_from_index(conn: &Connection, project_name: &str) -> Option<std::path::PathBuf> {
+    let mut stmt = conn
+        .prepare("SELECT file_path FROM facts_fts WHERE project_name = ?1 LIMIT 1")
+        .ok()?;
+    let file_path: String = stmt
+        .query_row([project_name], |row| row.get(0))
+        .optional()
+        .ok()?
+        .filter(|p: &String| !p.is_empty())?;
+    let path = std::path::PathBuf::from(file_path);
+    path.ancestors()
+        .find(|dir| dir.file_name().is_some_and(|n| n == ".uma"))
+        .map(|dir| dir.to_path_buf())
+}
+
 /// Summarises every scope present in the index, largest first.
 ///
 /// Takes a connection rather than opening the database itself, so it is
@@ -106,6 +127,50 @@ mod tests {
             title.to_string(),
             "body".to_string(),
         )
+    }
+
+    #[test]
+    fn test_store_root_resolves_through_indexed_file_paths() -> Result<()> {
+        let dir = tempdir()?;
+        let indexer = Indexer::open(dir.path().join("index.db"))?;
+
+        // No record yet -> unresolvable.
+        assert_eq!(
+            store_root_from_index(indexer.connection(), "ghost"),
+            None,
+            "a project the index never saw has no store root"
+        );
+
+        // An indexed fact under a foreign project's .uma resolves to that .uma.
+        let fact = fact("ProjektB", "one");
+        indexer.index_fact(
+            &fact,
+            Some(std::path::Path::new(r"D:/proj/ProjektB/.uma/decision/x.md")),
+        )?;
+        let root = store_root_from_index(indexer.connection(), "ProjektB")
+            .expect("indexed path must resolve");
+        assert_eq!(root, std::path::PathBuf::from(r"D:/proj/ProjektB/.uma"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_list_filters_by_fact_scope_not_directory() -> Result<()> {
+        let dir = tempdir()?;
+        let store = Store::new(dir.path().to_path_buf());
+
+        let mut foreign = fact("mozek_rust", "imported decision");
+        foreign.scope = Scope::Project("mozek_rust".to_string());
+        store.write(&foreign)?;
+        let local = fact("ai-memory", "local decision");
+        store.write(&local)?;
+
+        let listed = store.list(&Scope::Project("mozek_rust".to_string()), None)?;
+        assert_eq!(listed.len(), 1, "only the foreign-scope fact matches");
+        assert_eq!(listed[0].scope, Scope::Project("mozek_rust".to_string()));
+
+        let local_listed = store.list(&Scope::Project("ai-memory".to_string()), None)?;
+        assert_eq!(local_listed.len(), 1);
+        Ok(())
     }
 
     #[test]

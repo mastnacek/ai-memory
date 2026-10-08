@@ -41,9 +41,11 @@ impl Store {
         match mode {
             SearchMode::Keyword => {
                 let hits = search_keyword(indexer.connection(), &opts)?;
-                if hits.is_empty() {
-                    // The index is a rebuildable cache, so an empty result may
-                    // just mean a stale one. Rebuild and retry once.
+                if hits.is_empty() && indexer.indexed_count()? == 0 {
+                    // An empty index is a cache that was never built (or was
+                    // wiped), so build it and retry once. An empty RESULT on a
+                    // populated index is a genuine miss — rebuilding there
+                    // wiped and re-parsed the whole store on every typo.
                     let indexed = Self::reindex_all()?;
                     if indexed > 0 {
                         return Ok(SearchOutcome::complete(search_keyword(

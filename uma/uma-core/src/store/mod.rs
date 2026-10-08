@@ -6,7 +6,7 @@ use std::path::PathBuf;
 
 mod lookup;
 
-pub use lookup::{scope_summaries_from, ScopeSummary};
+pub use lookup::{scope_summaries_from, store_root_from_index, ScopeSummary};
 mod ops;
 mod search;
 
@@ -55,10 +55,39 @@ impl Store {
     }
 
     /// Returns the project store instance for the current git repository.
-    pub fn project(_project_name: String) -> Result<Self> {
-        let root = Self::find_git_root()?.join(".uma");
-        std::fs::create_dir_all(&root).context("Failed to create project store directory")?;
-        Ok(Self::new(root))
+    pub fn project(project_name: String) -> Result<Self> {
+        // The current repository's store is the writable, canonical one — but
+        // only when the asked-for name is actually this repository. Ignoring
+        // the name here silently answered `--scope OtherProject` with this
+        // project's facts.
+        if Self::current_project_name().is_some_and(|current| current == project_name) {
+            let git_root = Self::find_git_root()?;
+            let root = git_root.join(".uma");
+            std::fs::create_dir_all(&root)
+                .context("Failed to create project store directory")?;
+            return Ok(Self::new(root));
+        }
+
+        // A foreign project is reachable when the central index has seen its
+        // files: resolve its store root from there.
+        if let Some(root) = Self::foreign_store_root(&project_name)? {
+            return Ok(Self::new(root));
+        }
+
+        anyhow::bail!(
+            "Project '{}' is not the current repository and the central index has no record of its files — use `uma search --scope {0}` for index-based recall",
+            project_name
+        )
+    }
+
+    /// Resolves a foreign project's store root from the central index.
+    ///
+    /// Indexed facts remember `file_path`; walking up to the directory named
+    /// `.uma` yields that project's store even when the current working
+    /// directory is somewhere else entirely.
+    pub fn foreign_store_root(project_name: &str) -> Result<Option<PathBuf>> {
+        let indexer = Self::central_indexer()?;
+        Ok(store_root_from_index(indexer.connection(), project_name))
     }
 
     /// Resolves the current git repository root.

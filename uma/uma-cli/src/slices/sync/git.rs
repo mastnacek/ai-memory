@@ -15,6 +15,10 @@ pub fn run(dir: &Path, args: &[&str]) -> Result<String> {
     let output = Command::new("git")
         .current_dir(dir)
         .args(args)
+        // A background sync must fail fast, never wait on a credential
+        // prompt: without this, git on Windows opens a terminal prompt or a
+        // dialog when the remote needs HTTPS/SSH interaction.
+        .env("GIT_TERMINAL_PROMPT", "0")
         .output()
         .context("git executable not found — memory sync requires git")?;
 

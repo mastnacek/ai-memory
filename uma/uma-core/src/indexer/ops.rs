@@ -38,10 +38,12 @@ impl Indexer {
             .map(|s| s.to_rfc3339())
             .unwrap_or_default();
 
-        self.conn
-            .execute("DELETE FROM facts_fts WHERE id = ?1", params![id_str])?;
-        self.conn
-            .execute(
+        // One transaction per fact row: another client (MCP server, second
+        // agent) must never observe a fact half-deleted, and a busy writer now
+        // waits out busy_timeout instead of failing mid-pair.
+        let tx = self.conn.unchecked_transaction()?;
+        tx.execute("DELETE FROM facts_fts WHERE id = ?1", params![id_str])?;
+        tx.execute(
                 "INSERT INTO facts_fts (id, scope, project_name, fact_type, title, description, body, tags, status, supersedes, file_path, since, until, stale_after)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
                 params![
@@ -61,6 +63,7 @@ impl Indexer {
                     stale_str
                 ],
             )?;
+        tx.commit()?;
         Ok(())
     }
 

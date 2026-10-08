@@ -134,7 +134,7 @@ impl Store {
     }
 
     /// Lists facts from this store filtered by scope and fact type.
-    pub fn list(&self, _scope: &Scope, fact_type: Option<&FactType>) -> Result<Vec<Fact>> {
+    pub fn list(&self, scope: &Scope, fact_type: Option<&FactType>) -> Result<Vec<Fact>> {
         let mut facts = Vec::new();
         let search_root = match fact_type {
             Some(ft) => self.root.join(ft.dir_name()),
@@ -149,7 +149,13 @@ impl Store {
             if entry.file_type().is_file() && entry.path().extension().is_some_and(|e| e == "md") {
                 let content = std::fs::read_to_string(entry.path())?;
                 if let Ok(fact) = markdown_to_fact(&content) {
-                    facts.push(fact);
+                    // Scope is a property of the fact, not of the directory it
+                    // happens to sit in: imports and cross-store supersession
+                    // can place a foreign-scope fact here, and listing this
+                    // store must answer with the scope that was asked for.
+                    if fact.scope == *scope {
+                        facts.push(fact);
+                    }
                 }
             }
         }

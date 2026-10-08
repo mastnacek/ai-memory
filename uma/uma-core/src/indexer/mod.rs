@@ -31,6 +31,14 @@ impl Indexer {
         }
         let conn = Connection::open(&db_path)
             .with_context(|| format!("Failed to open index database {:?}", db_path))?;
+        // Multiple clients (CLI, Pi agent, MCP server) share one index file:
+        // WAL lets readers proceed during writes, and busy_timeout turns a
+        // momentary lock into a short wait instead of an immediate
+        // SQLITE_BUSY failure.
+        conn.execute_batch(
+            "PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;",
+        )
+        .with_context(|| format!("Failed to set concurrency pragmas on {:?}", db_path))?;
         let indexer = Self { conn, db_path };
         indexer.init_schema()?;
         Ok(indexer)
@@ -38,6 +46,18 @@ impl Indexer {
 
     pub fn connection(&self) -> &Connection {
         &self.conn
+    }
+
+    /// How many facts the index currently holds.
+    ///
+    /// Distinguishes "never built" from "built but found nothing" — only the
+    /// first is a reason to rebuild the cache.
+    pub fn indexed_count(&self) -> Result<i64> {
+        let count: i64 = self
+            .conn
+            .query_row("SELECT COUNT(*) FROM facts_fts", [], |row| row.get(0))
+            .context("Failed to count indexed facts")?;
+        Ok(count)
     }
 
     /// Initializes the FTS5 keyword and vector storage schemas.

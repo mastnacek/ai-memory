@@ -70,7 +70,7 @@ Capabilities that were not in the roadmap but are implemented, tested and in use
 | `search.rs` split into a folder | It was 394 lines, six below the 400 hard limit — the next search change would have been refused. Now `search/{mod,keyword,semantic,fusion,outcome}.rs`, all under the soft target. |
 | `stale_after` is now settable and visible | It was parsed, stored and honoured by `is_active_at`, but **no CLI slice could set it** — an unreachable field, i.e. a lie in the data model. Now: `uma write/supersede --stale-after` (bare dates accepted), a `[STALE]` badge distinct from `[DEPRECATED]`, and a `doctor` staleness check that names the remedy. Verified end-to-end, including MCP inheritance. |
 
-**Current tally**: 124 Rust tests (62 CLI + 58 core lib + 4 integration) and 7 TypeScript tests, 0 warnings in both debug and release builds.
+**Current tally**: 128 Rust tests (62 CLI + 62 core lib + 4 integration) and 7 TypeScript tests, 0 warnings in both debug and release builds.
 
 ### Outstanding work (as of 2026-10-08)
 
@@ -78,6 +78,9 @@ Capabilities that were not in the roadmap but are implemented, tested and in use
 | :--- | :--- | :--- |
 | Import from old sessions (§9) | **unlisted** | **Real source confirmed by the 2026-10-08 spike** — the four named memory systems do not exist here, but the agent session stores do: 578 sessions / 4.5 months / 124 projects, **122 from projects deleted from disk** (sampled: real decisions and troubleshooting, Czech substance, 0 secret-pattern hits). Design: proposal-only extraction through the approval modal, dead-project sessions first. |
 | Local embedding fallback | S9 | Question 2 |
+| `sqlite-vec`/LanceDB vector store (in-memory scan → extension) | S9+ | external review §3.4 |
+| Non-blocking embedding on write + surface vectorization failures | S9+ | external review §3.6 |
+| S3 compromise: recall-on-start (top-3 decisions/preferences injected once per session) | S9 | external review §4 |
 | Auto-recall / context injection | S3 | On hold by operator preference (deliberate) |
 | Consolidator is blind across scopes | S5 | Found by dogfooding: `consolidate` analyses one scope per run, so near-duplicates spanning project/global (e.g. the three-fact VSA cluster) are invisible to it. Not a contradiction, so nothing to fix urgently; a `--scope all` cross-scope mode is the obvious future extension. |
 | Pi panel / `/uma status` | S9 | Question 5 (cosmetic, blocks nothing) |
