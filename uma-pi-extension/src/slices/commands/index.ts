@@ -96,6 +96,21 @@ export function registerCommands(pi: ExtensionAPI, state: ExtensionState): void 
         } else {
           ctx.ui.notify(`${liveStrings.recallJudgeLabel}: ${state.config.fastbrainJudge}`, "info");
         }
+      } else if (subcommand === "immune") {
+        const wantsGlobal = isGlobal || cleanParts.includes("--global");
+        const target = cleanParts[1];
+        const valid = ["off", "warn", "ask", "auto"];
+        if (target && valid.includes(target)) {
+          const mode = target as "off" | "warn" | "ask" | "auto";
+          saveConfig({ immuneMode: mode }, wantsGlobal, ctx.cwd, state.globalConfigFile);
+          state.config = { ...state.config, immuneMode: mode };
+          ctx.ui.notify(`${liveStrings.immuneModeEnabled}${mode}`, "info");
+        } else {
+          ctx.ui.notify(
+            `${liveStrings.immuneModeCurrent}${state.config.immuneMode} (off | warn | ask | auto [--global])`,
+            "info",
+          );
+        }
       } else if (subcommand === "auto-approve") {
         const target = cleanParts[1];
         if (target === "on" || target === "true") {

@@ -24,6 +24,8 @@ export interface PluginConfig {
   autoApprove: boolean;
   /** Fastbrain recall gate (S3 compromise): OFF — recall stays explicit. */
   recallGate: boolean;
+  /** Immune interceptor mode: off | warn (default) | ask | auto. */
+  immuneMode: "off" | "warn" | "ask" | "auto";
   /** Recall judge transport: "off" (markers) or "jev" (Jev via OpenRouter). */
   fastbrainJudge: "off" | "jev";
 }

@@ -12,6 +12,7 @@ export function getUmaCompletions(
   const currentLang = state.config.lang;
   const currentAuto = state.config.autoApprove;
   const currentGate = state.config.recallGate;
+  const valid_immune = ["off", "warn", "ask", "auto"] as const;
   const currentJudge = state.config.fastbrainJudge;
 
   // Level 2: Subcommand parameters
@@ -94,6 +95,23 @@ export function getUmaCompletions(
         },
       ];
       return options.filter((o) => o.value.startsWith(`judge ${subPrefix}`));
+    }
+
+    if (sub === "immune") {
+      const subPrefix = tokens[1]?.toLowerCase() || "";
+      const current = state.config.immuneMode;
+      const descriptions: Record<string, string> = {
+        off: "Interceptor disabled",
+        warn: "Warnings only, never disturbs",
+        ask: "Confirm dialog per warning; decline blocks",
+        auto: "Block without asking (contracts) / ask (heuristics)",
+      };
+      const options = valid_immune.map((m) => ({
+        value: `immune ${m}`,
+        label: current === m ? `${m} ✓` : m,
+        description: current === m ? `${descriptions[m]} · ● ACTIVE` : descriptions[m],
+      }));
+      return options.filter((o) => o.value.startsWith(`immune ${subPrefix}`));
     }
 
     if (sub === "list") {
@@ -215,6 +233,11 @@ export function getUmaCompletions(
       value: "judge ",
       label: `judge (${currentJudge})`,
       description: `Recall judge transport (current: ${currentJudge})`,
+    },
+    {
+      value: "immune ",
+      label: `immune (${state.config.immuneMode})`,
+      description: "Immune interceptor mode (off | warn | ask | auto)",
     },
   ];
 

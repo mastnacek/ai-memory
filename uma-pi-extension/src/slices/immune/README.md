@@ -18,9 +18,22 @@ memory-relevant hazards before code lands, without trusting a probabilistic
 verdict to veto anything. Kept import-free of pi APIs so `node --test`
 exercises the policy directly.
 
+## Modes (`/uma immune off|warn|ask|auto [--global]`)
+
+- **off** — the interceptor does not run.
+- **warn** (default) — warnings as notifications, never disturbing the flow.
+- **ask** — each warning set is a confirm dialog; **a decline blocks the
+  tool call with the warning as the reason**. The AI proposes, the operator
+  disposes — consented blocking, the consent model intact.
+- **auto** — today behaves like `ask` with an explanatory line: the
+  recorded decision reserves silent auto-blocking for *deterministic
+  contract-backed rules* (proposal 03). When contracts land, auto blocks
+  contract violations outright and still asks for heuristic warnings.
+
 ## Invariant
 
-**Advisory only.** Nothing in this slice can block a tool call, and its
-warnings never reach the model transcript — UI notifications only. The
-thresholds are live-fixture-validated (the VSA probe warns, benign edits
-stay silent) and pinned by tests.
+**A heuristic verdict may notify or ask; it may never silently veto.** The
+only path to a block without a dialog is a deterministic contract (not yet
+implemented — SPAI-003). Warnings never reach the model transcript — UI
+only. Thresholds are live-fixture-validated (the VSA probe warns, benign
+edits stay silent) and pinned by tests.

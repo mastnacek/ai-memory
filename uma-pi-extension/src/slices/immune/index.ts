@@ -109,3 +109,48 @@ export function extractEdit(toolName: string, input: unknown): { path: string; a
   }
   return undefined;
 }
+
+/** What the hook should do with an assessment, given the operator's mode. */
+export type ImmuneAction =
+  | { kind: "allow" }
+  | { kind: "notify"; message: string }
+  | { kind: "confirm"; message: string }
+  | { kind: "block"; reason: string };
+
+/**
+ * Pure mode policy (testable without pi):
+ * - off:    the interceptor does not run
+ * - warn:   surface the warnings, never disturb the flow
+ * - ask:    show each warning set as a confirm dialog; a decline BLOCKS the
+ *           tool call with the reason — the operator consented to the block,
+ *           the AI proposed it, which is the consent model intact
+ * - auto:   block without asking. Until deterministic contract-backed rules
+ *           exist (proposal 03), every verdict here is heuristic, and the
+ *           recorded decision says a heuristic verdict may not silently veto
+ *           work — so auto currently behaves like ask and says so in the
+ *           dialog. When contracts land, auto blocks contract violations
+ *           outright and still asks for heuristic ones.
+ */
+export function decideImmuneAction(
+  mode: "off" | "warn" | "ask" | "auto",
+  warnings: string[],
+): ImmuneAction {
+  if (warnings.length === 0) return { kind: "allow" };
+  const message = warnings.join("\n");
+
+  switch (mode) {
+    case "off":
+      return { kind: "allow" };
+    case "warn":
+      return { kind: "notify", message };
+    case "ask":
+      return { kind: "confirm", message };
+    case "auto":
+      return {
+        kind: "confirm",
+        message:
+          message +
+          "\n(auto mode: blocks only contract-backed rules once they exist; heuristics ask)",
+      };
+  }
+}

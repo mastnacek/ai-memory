@@ -34,6 +34,9 @@ export interface Strings {
   recallGateDisabled: string;
   recallGateCurrent: string;
   recallJudgeLabel: string;
+  immuneModeEnabled: string;
+  immuneModeCurrent: string;
+  immuneModeLabel: string;
   descUmaCommand: string;
   scopeGlobal: string;
   scopeProject: string;
@@ -77,6 +80,9 @@ const STRINGS: Record<Locale, Strings> = {
     recallGateDisabled: "Fastbrain recall gate OFF (recall stays explicit)",
     recallGateCurrent: "Recall gate state: ",
     recallJudgeLabel: "Judge",
+    immuneModeEnabled: "Immune interceptor mode updated: ",
+    immuneModeCurrent: "Immune interceptor mode: ",
+    immuneModeLabel: "Immune",
     descUmaCommand: "Universal Memory Architecture (UMA) manager",
     scopeGlobal: "Global (all projects)",
     scopeProject: "Project",
@@ -118,6 +124,9 @@ const STRINGS: Record<Locale, Strings> = {
     recallGateDisabled: "Recallová brána VYPNUTÁ (recall zůstává explicitní)",
     recallGateCurrent: "Stav recallové brány: ",
     recallJudgeLabel: "Soudce",
+    immuneModeEnabled: "Režim imunního interceptoru nastaven: ",
+    immuneModeCurrent: "Režim imunního interceptoru: ",
+    immuneModeLabel: "Imunita",
     descUmaCommand: "Správa paměťového systému UMA",
     scopeGlobal: "Globální (všechny projekty)",
     scopeProject: "Projekt",

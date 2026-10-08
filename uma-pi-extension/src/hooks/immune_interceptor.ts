@@ -12,7 +12,13 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import type { ExtensionState } from "../shared/types.js";
 import { runUma, findUmaBinary } from "../shared/client.js";
-import { assessEdit, extractEdit, type PainVerdict, type RuleL1 } from "../slices/immune/index.js";
+import {
+  assessEdit,
+  decideImmuneAction,
+  extractEdit,
+  type PainVerdict,
+  type RuleL1,
+} from "../slices/immune/index.js";
 
 /** Upper bound per check: a warning that costs 5 seconds is worse than none. */
 const CHECK_TIMEOUT_MS = 5_000;
@@ -79,7 +85,10 @@ export function resetImmuneCache(): void {
 
 export function registerImmuneInterceptor(pi: ExtensionAPI, state: ExtensionState): () => void {
   const unsubscribe = pi.on("tool_call", async (event, ctx) => {
-    // Warn-only v1: only file-mutating code tools are checked at all.
+    const mode = state.config.immuneMode;
+    if (mode === "off") return undefined;
+
+    // Only file-mutating code tools are checked at all.
     const edit = extractEdit(event.toolName, event.input);
     if (!edit) return undefined;
 
@@ -89,10 +98,30 @@ export function registerImmuneInterceptor(pi: ExtensionAPI, state: ExtensionStat
         fetchRules(ctx.cwd),
       ]);
       const warnings = assessEdit(pain, rules, edit.added);
-      if (warnings.length > 0) {
-        // UI-only: the agent and the transcript never see these; the
-        // operator decides what to do with them. NEVER a block.
-        ctx.ui.notify(warnings.join("\n"), "warning");
+      const action = decideImmuneAction(mode, warnings);
+
+      switch (action.kind) {
+        case "allow":
+          return undefined;
+        case "notify":
+          // UI-only: the agent and the transcript never see these.
+          ctx.ui.notify(action.message, "warning");
+          return undefined;
+        case "confirm":
+          // The AI proposed, the operator decides: a decline BLOCKS the
+          // call with the reason — consented blocking, the consent model
+          // intact.
+          if (action.message.length > 0) {
+            const proceed = await ctx.ui.confirm("UMA immune interceptor", action.message);
+            if (proceed === false) {
+              return { block: true, reason: action.message };
+            }
+          }
+          return undefined;
+        case "block":
+          return { block: true, reason: action.reason };
+        default:
+          return undefined;
       }
     } catch {
       // Advisory half of the consent model: silence is the safe fallback.

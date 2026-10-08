@@ -9,6 +9,9 @@ const DEFAULT_CONFIG: PluginConfig = {
   // S3 was paused by operator preference; the gate reopens it only when the
   // operator flips it on explicitly.
   recallGate: false,
+  // Warn-only keeps the pre-existing interceptor behavior as the default;
+  // stronger modes are the operator's explicit choice.
+  immuneMode: "warn",
   fastbrainJudge: "off",
 };
 

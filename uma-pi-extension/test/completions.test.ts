@@ -29,3 +29,12 @@ test("recall and judge complete with the current state marked", () => {
   const markers = getUmaCompletions("judge ", state({ fastbrainJudge: "off" }));
   assert.ok(markers.find((i) => i.value === "judge off")?.label.includes("✓"));
 });
+test("immune mode completes with the active mode marked", () => {
+  const items = getUmaCompletions("immune ", state({ immuneMode: "ask" }));
+  const values = items.map((i) => i.value);
+  for (const expected of ["immune off", "immune warn", "immune ask", "immune auto"]) {
+    assert.ok(values.includes(expected), `missing: ${expected}`);
+  }
+  assert.ok(items.find((i) => i.value === "immune ask")?.label.includes("✓"));
+  assert.ok(!items.find((i) => i.value === "immune warn")?.label.includes("✓"));
+});
