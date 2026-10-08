@@ -11,10 +11,12 @@
 //! flattened), and the same project legitimately appears under several encoded
 //! names — one per machine it was worked on.
 
+mod extract;
 mod lookup;
 mod reader;
 mod types;
 
+pub use extract::{candidates_from, candidates_from_many, Candidate, CandidateKind};
 pub use lookup::{default_roots, find_session, project_alive};
 pub use reader::{read_detail, scan_at};
 pub use types::{SessionDetail, SessionRecord, SessionSource};

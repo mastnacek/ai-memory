@@ -36,6 +36,7 @@ export interface Strings {
   supersedesLabel: string;
   templateLabel: string;
   staleAfterLabel: string;
+  sinceLabel: string;
 }
 
 const STRINGS: Record<Locale, Strings> = {
@@ -74,6 +75,7 @@ const STRINGS: Record<Locale, Strings> = {
     supersedesLabel: "Supersedes",
     templateLabel: "Template (not executed)",
     staleAfterLabel: "Valid until (re-verify after)",
+    sinceLabel: "Valid from",
   },
   cs: {
     proposalHeader: "🧠 UMA • Návrh zápisu do paměti",
@@ -110,6 +112,7 @@ const STRINGS: Record<Locale, Strings> = {
     supersedesLabel: "Nahrazuje",
     templateLabel: "Šablona (nespouští se)",
     staleAfterLabel: "Platí do (poté znovu ověřit)",
+    sinceLabel: "Platí od",
   },
 };
 

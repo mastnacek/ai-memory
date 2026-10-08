@@ -41,6 +41,11 @@ pub struct WriteArgs {
     /// Accepts RFC 3339 (2026-12-31T23:59:59Z) or a bare date (2026-12-31).
     #[arg(long = "stale-after", value_name = "WHEN")]
     pub stale_after: Option<String>,
+
+    /// When the claim started to hold (imports use the session's date, so an
+    /// imported decision does not masquerade as being made today)
+    #[arg(long = "since", value_name = "WHEN")]
+    pub since: Option<String>,
 }
 
 /// Executes the Write vertical slice: creates and stores a new fact.
@@ -62,6 +67,9 @@ pub fn run(args: WriteArgs) -> Result<()> {
     fact.template = args.template;
     if let Some(raw) = args.stale_after.as_deref() {
         fact.validity.stale_after = Some(parse_datetime_or_date(raw)?);
+    }
+    if let Some(raw) = args.since.as_deref() {
+        fact.validity.since = parse_datetime_or_date(raw)?;
     }
 
     let store = get_store(&fact.scope)?;
@@ -105,6 +113,32 @@ mod tests {
         );
         assert_eq!(cli.args.scope, Some("global".to_string()));
         assert_eq!(cli.args.tags, vec!["vsa", "arch", "rust"]);
+        Ok(())
+    }
+
+    #[test]
+    fn test_since_accepts_bare_date_and_rfc3339() -> Result<(), clap::Error> {
+        let cli = TestCli::try_parse_from([
+            "test",
+            "--type",
+            "decision",
+            "--title",
+            "Imported decision",
+            "--since",
+            "2026-02-11",
+        ])?;
+        assert_eq!(cli.args.since.as_deref(), Some("2026-02-11"));
+
+        let cli = TestCli::try_parse_from([
+            "test",
+            "--type",
+            "decision",
+            "--title",
+            "Imported decision",
+            "--since",
+            "2026-02-11T09:30:00Z",
+        ])?;
+        assert_eq!(cli.args.since.as_deref(), Some("2026-02-11T09:30:00Z"));
         Ok(())
     }
 }

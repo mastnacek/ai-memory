@@ -95,7 +95,8 @@ ai-memory/
                 ├── doctor/     # S8: read-only health report
                 ├── sync/       # S8: git-backed sync of the global store
                 ├── scopes/     # cross-project scope discovery (read-only)
-                └── sessions/   # S9: session browser over pi/claude stores (read-only)
+                ├── sessions/   # S9: session browser over pi/claude stores (read-only)
+                └── import/     # S9: session→memory candidates (proposals only, never writes)
                 # every slice folder = mod.rs (+ helpers) + README.md
 ```
 

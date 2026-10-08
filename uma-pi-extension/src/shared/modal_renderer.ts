@@ -88,6 +88,11 @@ export function renderProposalView(opts: ModalRenderOptions): string[] {
       `  ${theme.fg("muted", "⏳  " + s.staleAfterLabel + ":")} ${theme.fg("dim", proposal.stale_after)}`
     );
   }
+  if (proposal.since) {
+    rawLines.push(
+      `  ${theme.fg("muted", "⏱  " + s.sinceLabel + ":")} ${theme.fg("dim", proposal.since)}`
+    );
+  }
   rawLines.push("");
 
   // 3. Title Box

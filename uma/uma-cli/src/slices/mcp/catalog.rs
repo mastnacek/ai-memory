@@ -117,7 +117,8 @@ fn mutating_specs() -> Vec<ToolSpec> {
                     "scope": { "type": "string" },
                     "tags": { "type": "array", "items": { "type": "string" } },
                     "template": { "type": "string", "description": "For type 'skill': an invocation template with {{placeholders}}." },
-                    "staleAfter": { "type": "string", "description": "When the claim needs re-verification (ISO 8601 or a bare date)." }
+                    "staleAfter": { "type": "string", "description": "When the claim needs re-verification (ISO 8601 or a bare date)." },
+                    "since": { "type": "string", "description": "When the claim started to hold (ISO 8601 or a bare date); imports use the source session's date." }
                 },
                 "required": ["title", "body"]
             }),

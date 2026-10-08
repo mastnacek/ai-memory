@@ -61,6 +61,9 @@ enum Commands {
 
     /// Browse the pi and Claude Code session stores (read-only)
     Sessions(slices::sessions::SessionsArgs),
+
+    /// Extract memory candidates from agent sessions (proposals only)
+    Import(slices::import::ImportArgs),
 }
 
 fn main() -> Result<()> {
@@ -82,5 +85,6 @@ fn main() -> Result<()> {
         Commands::Sync(args) => slices::sync::run(args),
         Commands::Scopes(args) => slices::scopes::run(args),
         Commands::Sessions(args) => slices::sessions::run(args),
+        Commands::Import(args) => slices::import::run(args),
     }
 }

@@ -39,6 +39,12 @@ export function registerWriteTool(pi: ExtensionAPI, state: ExtensionState): void
             "When the claim stops being trusted without re-verification. ISO 8601 timestamp or a bare date (2026-12-31).",
         })
       ),
+      since: Type.Optional(
+        Type.String({
+          description:
+            "When the claim started to hold. ISO 8601 timestamp or a bare date. Imports use the source session's date, so an imported decision does not masquerade as being made today.",
+        })
+      ),
     }),
     execute: async (_toolCallId, params, _signal, _onUpdate, ctx) => {
       const initialProposal: MemoryProposal = {
@@ -49,6 +55,7 @@ export function registerWriteTool(pi: ExtensionAPI, state: ExtensionState): void
         tags: params.tags || [],
         template: params.template,
         stale_after: params.staleAfter,
+        since: params.since,
       };
 
       // In interactive TUI mode (and when autoApprove is false), show the modal proposal window
@@ -79,6 +86,9 @@ export function registerWriteTool(pi: ExtensionAPI, state: ExtensionState): void
       }
       if (approvedProposal.stale_after) {
         args.push("--stale-after", approvedProposal.stale_after);
+      }
+      if (approvedProposal.since) {
+        args.push("--since", approvedProposal.since);
       }
 
       return executeUma(ctx.cwd, args);

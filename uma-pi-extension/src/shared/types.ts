@@ -10,6 +10,8 @@ export interface MemoryProposal {
   template?: string;
   /** ISO 8601 date/timestamp after which the claim needs re-verification. */
   stale_after?: string;
+  /** ISO 8601 date/timestamp when the claim started to hold (imports). */
+  since?: string;
 }
 
 export interface ProposalResult {

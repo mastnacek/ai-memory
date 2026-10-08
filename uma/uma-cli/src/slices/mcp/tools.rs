@@ -230,6 +230,9 @@ fn write(args: &Value) -> Result<String, String> {
         fact.validity.stale_after =
             Some(parse_datetime_or_date(&raw).map_err(|err| err.to_string())?);
     }
+    if let Some(raw) = str_arg(args, "since") {
+        fact.validity.since = parse_datetime_or_date(&raw).map_err(|err| err.to_string())?;
+    }
 
     store.write(&fact).map_err(|err| err.to_string())?;
     Ok(format!("Created fact: {}", fact.id))
