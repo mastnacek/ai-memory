@@ -4,7 +4,7 @@ use clap::Args;
 use std::str::FromStr;
 use uma_core::{domain::FactType, search::SearchMode, store::Store};
 
-use crate::shared::scope::resolve_scope;
+use crate::shared::{format::status_suffix, scope::resolve_scope};
 
 #[derive(Args, Debug, Clone)]
 pub struct SearchArgs {
@@ -110,11 +110,7 @@ pub fn run(args: SearchArgs) -> Result<()> {
         mode
     );
     for (idx, hit) in hits.iter().enumerate() {
-        let status_badge = match hit.status {
-            uma_core::domain::FactStatus::Stable => "",
-            uma_core::domain::FactStatus::Deprecated => " [DEPRECATED]",
-            uma_core::domain::FactStatus::Draft => " [DRAFT]",
-        };
+        let status_badge = status_suffix(&hit.status);
 
         println!(
             "{}. {} [{}] [{}]{} (score: {:.3})",

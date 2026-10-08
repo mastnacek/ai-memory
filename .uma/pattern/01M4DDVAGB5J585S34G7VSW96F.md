@@ -9,7 +9,7 @@ tags:
   - skills
   - settings
   - plugin
-status: stable
+status: deprecated
 generated:
   by: pi-agent/1.1
   at: "2026-10-08T09:34:57.035902300+00:00"
@@ -17,6 +17,7 @@ verified:
   - by: "human:operator"
     at: "2026-10-08T09:34:57.035903900+00:00"
 since: "2026-10-08T09:34:57.035904+00:00"
+until: "2026-10-08T09:53:57.217427300+00:00"
 ---
 ### Context
 A skill placed only in `skills/uma-memory/` is invisible to Pi, whose default discovery is `.pi/skills/`. Copying it into `.pi/skills/` creates a second file that silently drifts from the original.

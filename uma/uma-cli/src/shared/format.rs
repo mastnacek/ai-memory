@@ -1,4 +1,13 @@
-use uma_core::domain::Fact;
+use uma_core::domain::{Fact, FactStatus};
+
+/// Returns the lifecycle badge suffix for a fact status (empty string when stable).
+pub fn status_suffix(status: &FactStatus) -> &'static str {
+    match status {
+        FactStatus::Stable => "",
+        FactStatus::Deprecated => " [DEPRECATED]",
+        FactStatus::Draft => " [DRAFT]",
+    }
+}
 
 /// Prints the complete representation of a Fact to stdout.
 pub fn print_fact(fact: &Fact) {
@@ -6,6 +15,7 @@ pub fn print_fact(fact: &Fact) {
     println!("Scope:    {}", fact.scope);
     println!("Type:     {}", fact.fact_type);
     println!("Title:    {}", fact.title);
+    println!("Status:   {}{}", fact.status, status_suffix(&fact.status));
     println!(
         "Since:    {}",
         fact.validity.since.format("%Y-%m-%d %H:%M:%S UTC")
@@ -32,5 +42,11 @@ pub fn print_fact(fact: &Fact) {
 
 /// Prints a one-line summary of a Fact (for list views).
 pub fn print_fact_summary(fact: &Fact) {
-    println!("{} [{}] {}", fact.id, fact.fact_type, fact.title);
+    println!(
+        "{} [{}] {}{}",
+        fact.id,
+        fact.fact_type,
+        fact.title,
+        status_suffix(&fact.status)
+    );
 }
