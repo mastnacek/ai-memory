@@ -156,11 +156,7 @@ fn emit(verdict: &RecallVerdict, json: bool) -> Result<()> {
 
 /// Recalls facts for the trigger: the prompt's meaningful tokens as a BM25
 /// keyword query, filtered to the judge's subtypes when it named any.
-fn recall_facts(
-    prompt: &str,
-    fact_types: &[String],
-    max: usize,
-) -> Result<Vec<serde_json::Value>> {
+fn recall_facts(prompt: &str, fact_types: &[String], max: usize) -> Result<Vec<serde_json::Value>> {
     let query = recall_query(prompt);
     let subtypes: Vec<FactType> = fact_types
         .iter()
@@ -171,7 +167,10 @@ fn recall_facts(
     let filters: Vec<Option<FactType>> = if subtypes.is_empty() {
         vec![None]
     } else {
-        subtypes.iter().map(|fact_type| Some(fact_type.clone())).collect()
+        subtypes
+            .iter()
+            .map(|fact_type| Some(fact_type.clone()))
+            .collect()
     };
     for filter in filters {
         if facts.len() >= max {
@@ -206,8 +205,8 @@ fn recall_facts(
 /// BM25 keeps signal instead of matching everything vaguely.
 fn recall_query(prompt: &str) -> String {
     const NOISE: &[&str] = &[
-        "the", "and", "for", "with", "that", "this", "please", "could", "would", "does",
-        "jak", "pro", "nebo", "když", "aby", "tedy",
+        "the", "and", "for", "with", "that", "this", "please", "could", "would", "does", "jak",
+        "pro", "nebo", "když", "aby", "tedy",
     ];
     prompt
         .split(|c: char| !c.is_alphanumeric())
