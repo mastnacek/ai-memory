@@ -29,9 +29,10 @@ This project strictly adopts and enforces **Vertical Slice Architecture (VSA)** 
    - Contains domain models (`Fact`, `FactId`, `FactType`, `Scope`, `Validity`), storage engine (`Store`), serialization (YAML frontmatter + Markdown), and cross-cutting helpers (scope resolution, output formatting).
    - **Zero knowledge of individual slices**: Shared code must never import or depend on feature slices.
 
-3. **Feature Slices (`uma-cli/src/slices/<feature>.rs` or `uma-cli/src/slices/<feature>/`)**:
+3. **Feature Slices (`uma-cli/src/slices/<feature>/`, holding `mod.rs` + `README.md`)**:
    - Each slice encapsulates **one complete, user-visible capability end-to-end**: CLI arguments definition, business logic, storage mutations, validation, and presentation.
    - **Inviolable Slice Boundary**: **Slices NEVER import each other directly.** All shared contracts and types flow through `uma-core` or `src/shared/`.
+   - **Every slice folder documents itself**: `slices/<feature>/README.md` states what the slice does, why it exists, and the invariant it must not break (concise — what + why, roughly 15-30 lines). This applies to both the Rust CLI and `uma-pi-extension/src/slices/`. A slice without its `README.md` is incomplete.
 
 4. **File Length Limits**:
    - Source files must remain at or below **400 lines** (soft target 300 lines).
@@ -68,11 +69,25 @@ ai-memory/
             │   ├── store_helper.rs # Store factory helpers
             │   └── format.rs   # Fact output & summary printers
             └── slices/         # Vertical Feature Slices (Isolated)
-                ├── mod.rs
-                ├── write.rs    # Slice S0: Write/Create fact
-                ├── read.rs     # Slice S0: Read fact by ID
-                ├── list.rs     # Slice S0: List facts by scope/type
-                └── search.rs   # Slice S1: BM25 search (SQLite FTS5)
+                ├── mod.rs      # Slice registry
+                ├── write/
+                │   ├── mod.rs  # Slice S0: Write/Create fact
+                │   └── README.md
+                ├── read/
+                │   ├── mod.rs  # Slice S0: Read fact by ID
+                │   └── README.md
+                ├── list/
+                │   ├── mod.rs  # Slice S0: List facts by scope/type
+                │   └── README.md
+                ├── search/
+                │   ├── mod.rs  # Slice S1/S2: BM25 + semantic + hybrid RRF
+                │   └── README.md
+                ├── supersede/
+                │   ├── mod.rs  # Slice S4: Supersession chain
+                │   └── README.md
+                └── migrate/
+                    ├── mod.rs  # Slice S4: OKF v0.2 forward migration
+                    └── README.md
 ```
 
 ---
@@ -83,15 +98,15 @@ When implementing new capabilities, add them as **new vertical feature slices**:
 
 | Slice | Capability | Implementation Target |
 | :--- | :--- | :--- |
-| **S0** | Core Store + Write / Read / List | `slices/write.rs`, `slices/read.rs`, `slices/list.rs` (Completed) |
-| **S1** | Keyword Search (BM25) | `slices/search.rs` (SQLite FTS5 indexer in `uma-core`) (Completed) |
-| **S2** | Semantic Vector Search | `slices/search.rs` (OpenRouter embeddings + Hybrid RRF) (Completed) |
+| **S0** | Core Store + Write / Read / List | `slices/{write,read,list}/` (Completed) |
+| **S1** | Keyword Search (BM25) | `slices/search/` (SQLite FTS5 indexer in `uma-core`) (Completed) |
+| **S2** | Semantic Vector Search | `slices/search/` (OpenRouter embeddings + Hybrid RRF) (Completed) |
 | **S3** | Auto-Recall & Context Injection | `[?]` *On Hold* (Operator preference: on-demand explicit search) |
-| **S4** | Temporal Validity & Supersession | `slices/supersede.rs`, `slices/migrate.rs` (OKF v0.2 Lifecycle & Chained Supersession) (Completed) |
-| **S5** | Consolidation Proposer | `slices/consolidate.rs` (Merge/deduplication proposals) |
-| **S6** | Procedural Skill Memory | `slices/skill.rs` (Templates & execution) |
-| **S7** | Universal MCP Server | `slices/mcp.rs` (`rmcp` / JSON-RPC stdio server) |
-| **S8** | Sync & Transport | `slices/sync.rs` (Git/rsync bundle sync) |
+| **S4** | Temporal Validity & Supersession | `slices/supersede/`, `slices/migrate/` (OKF v0.2 Lifecycle & Chained Supersession) (Completed) |
+| **S5** | Consolidation Proposer | `slices/consolidate/` (Merge/deduplication proposals) |
+| **S6** | Procedural Skill Memory | `slices/skill/` (Templates & execution) |
+| **S7** | Universal MCP Server | `slices/mcp/` (`rmcp` / JSON-RPC stdio server) |
+| **S8** | Sync & Transport | `slices/sync/` (Git/rsync bundle sync) |
 
 ---
 
@@ -100,9 +115,9 @@ When implementing new capabilities, add them as **new vertical feature slices**:
 - **Run all tests**: `cd uma && cargo test` (must pass 100% with 0 warnings).
 - **Build binary**: `cd uma && cargo build --release`.
 - **Add a new slice**:
-  1. Create `uma-cli/src/slices/<feature>.rs` (or `uma-cli/src/slices/<feature>/mod.rs`).
-  2. Define the slice `Args` struct with `clap::Args`.
-  3. Implement `pub fn run(args: <Feature>Args) -> Result<()>`.
+  1. Create the slice folder `uma-cli/src/slices/<feature>/`.
+  2. Write `mod.rs` with the slice `Args` struct (`clap::Args`) and `pub fn run(args: <Feature>Args) -> Result<()>`.
+  3. Write `README.md` — what the slice does, why it exists, and its invariant (mandatory).
   4. Register the module in `uma-cli/src/slices/mod.rs`.
   5. Add the subcommand variant in `uma-cli/src/main.rs` dispatch.
   6. Add unit tests for argument parsing and execution.

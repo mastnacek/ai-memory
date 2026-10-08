@@ -267,24 +267,30 @@ transport = "stdio"
 ```
 uma-pi-extension/
 ├── package.json
-├── index.ts              # Pi extension entry
-├── tools/
-│   ├── write.ts
-│   ├── read.ts
-│   ├── search.ts
-│   ├── supersede.ts
-│   ├── consolidate.ts
-│   └── recall.ts         # auto-injection
-├── commands/
-│   ├── status.ts
-│   ├── timeline.ts
-│   ├── export.ts
-│   └── doctor.ts
-└── utils/
-    └── uma-binary.ts     # spawns `uma` binary, parses JSON output
+├── index.ts                  # Composition root: state, hooks, slice wiring
+├── src/
+│   ├── shared/               # Kernel
+│   │   ├── client.ts         # spawns `uma`, parses JSON
+│   │   ├── config.ts         # .pi/uma.json + global config
+│   │   ├── i18n.ts           # cs/en strings
+│   │   ├── modal.ts          # approval modal
+│   │   ├── modal_renderer.ts # modal drawing
+│   │   ├── state.ts
+│   │   └── types.ts
+│   ├── hooks/
+│   │   └── approval_gate.ts  # fail-closed tool_call guard
+│   └── slices/
+│       ├── write/     { index.ts, README.md }
+│       ├── read/      { index.ts, README.md }
+│       ├── list/      { index.ts, README.md }
+│       ├── search/    { index.ts, README.md }
+│       ├── supersede/ { index.ts, README.md }
+│       └── commands/  { index.ts, complete.ts, README.md }
+└── test/
+    └── approval_gate.test.ts
 ```
 
-**Key point**: Pi extension is *thin* — all logic in Rust binary. Extension only handles Pi protocol, tool schemas, context injection.
+**Key point**: Pi extension is *thin* — all logic in Rust binary. Extension only handles Pi protocol, tool schemas, consent (the approval modal), and slice wiring.
 
 ---
 
@@ -319,7 +325,7 @@ Imports preserve `created_at`, map types, create supersession chains for conflic
 - [ ] Unit tests: domain logic, indexer, search fusion
 - [ ] Integration test: write → search → read → supersede roundtrip
 - [ ] Manual test in Pi session with 2+ models (Opus, Sonnet, local)
-- [ ] Docs updated: `docs/slice-<N>.md`
+- [x] Docs updated: `slices/<feature>/README.md` — colocated with the slice (what it does, why it exists, its invariant), not a central `docs/` tree
 
 ---
 
