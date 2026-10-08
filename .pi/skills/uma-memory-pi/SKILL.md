@@ -22,13 +22,29 @@ In Pi, call the **tools** — they share the same store as the CLI and add the a
 | Tool | Purpose |
 | :--- | :--- |
 | `uma_search` | Hybrid BM25 + semantic search. Args: `query`, `mode` (`keyword`\|`semantic`\|`hybrid`), `scope`, `type`, `includeDeprecated`, `asOf`, `limit`. |
-| `uma_write` | Store a new fact. Args: `title`, `body`, `type`, `scope`, `tags`, `description`. Opens the approval modal. |
-| `uma_supersede` | Replace a fact with a revised revision. Args: `oldId`, `title`, `body`, `description`, `type`, `scope`, `tags`. The predecessor is kept as `status: deprecated` and chained via `supersedes`. |
+| `uma_write` | Store a new fact. Args: `title`, `body`, `type`, `scope`, `tags`, `description`, `template`. Opens the approval modal. |
+| `uma_supersede` | Replace a fact with a revised revision. Args: `oldId`, `title`, `body`, `description`, `type`, `scope`, `tags`, `template`. The predecessor is kept as `status: deprecated` and chained via `supersedes`. |
+| `uma_consolidate` | Review memory for near-duplicate facts (proposed merges) and opposing facts (contradiction flags). Read-only, ungated. Apply a proposal with `uma_supersede` or `uma_write`. |
+| `uma_skill_invoke` | Expand a stored `skill` template into a concrete command. Args: `name`, `set` (`['tag=v1']`), `scope`. Read-only, ungated. Returns **text only** — run the command yourself. |
 | `uma_list` | List memories by `scope` and `type`. |
 | `uma_read` | Read one fact by `id` (ULID). |
 
 The `uma` CLI is still available in `bash` (and is the only path in non-interactive runs), but
 inside an interactive Pi session the tools are preferred because they route through approval.
+
+### Skills (procedural memory)
+
+A `skill` fact carries a `template` — a command with `{{placeholder}}` slots. Author one when you
+worked out a non-obvious command or sequence you would otherwise re-derive next session: call
+`uma_write` with `type: "skill"` plus `template`, and it goes through the normal approval modal
+(there is no separate gated tool for this).
+
+**`uma_skill_invoke` expands a template and returns text. It never executes anything.** Run the
+returned command yourself with `bash`, so your own command approval still applies. Never treat
+UMA as an execution primitive. If the expansion reports missing placeholders, supply them — they
+are left visible rather than silently blanked.
+
+To revise a skill, use `uma_supersede`; the template is inherited unless you pass a new one.
 
 ---
 

@@ -26,6 +26,12 @@ export function registerSupersedeTool(pi: ExtensionAPI, state: ExtensionState): 
       tags: Type.Optional(
         Type.Array(Type.String(), { description: "Tags; defaults to the predecessor's tags if omitted." })
       ),
+      template: Type.Optional(
+        Type.String({
+          description:
+            "Invocation template for 'skill' facts; defaults to the predecessor's template. Placeholders use {{name}} and are never executed.",
+        })
+      ),
     }),
     execute: async (_toolCallId, params, _signal, _onUpdate, ctx) => {
       // Resolve the predecessor so the modal shows its real type/scope/tags and
@@ -58,6 +64,7 @@ export function registerSupersedeTool(pi: ExtensionAPI, state: ExtensionState): 
 
       const args = ["supersede", params.oldId, "--title", approved.title, "--body", approved.body];
       if (params.description) args.push("--desc", params.description);
+      if (params.template) args.push("--template", params.template);
       if (approved.type) args.push("--type", approved.type);
       if (approved.scope) args.push("--scope", approved.scope);
       if (approved.tags.length > 0) args.push("--tags", approved.tags.join(","));

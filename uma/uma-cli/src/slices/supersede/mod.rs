@@ -37,6 +37,12 @@ pub struct SupersedeArgs {
     /// Tags (comma-separated, defaults to predecessor's tags if empty)
     #[arg(long = "tags", value_delimiter = ',')]
     pub tags: Vec<String>,
+
+    /// Invocation template (defaults to the predecessor's template).
+    /// Without this, a revision of a `skill` fact would silently lose its
+    /// template and the skill would stop being expandable.
+    #[arg(long = "template")]
+    pub template: Option<String>,
 }
 
 /// Executes the Supersede vertical slice: chains supersession and invalidates previous fact.
@@ -72,6 +78,9 @@ pub fn run(args: SupersedeArgs) -> Result<()> {
     let mut new_fact = Fact::new(scope.clone(), fact_type, args.title, body);
     new_fact.description = args.description;
     new_fact.tags = tags;
+    // Inherit like type/scope/tags: a revision must never silently drop the
+    // invocation template, or the skill would stop being invokable.
+    new_fact.template = args.template.or_else(|| old_fact.template.clone());
 
     let store = get_store(&scope)?;
     let created = store.supersede(&old_id, new_fact)?;

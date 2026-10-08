@@ -28,6 +28,27 @@ Record a memory under the following triggers:
 | **Environmental Fact** | `fact` | `project` | API endpoint URLs, build requirements, port allocations. |
 | **Procedural How-To** | `skill` | `project` / `global` | Step-by-step commands to build, package, or deploy the artifact. |
 
+### Authoring a Skill
+
+A `skill` fact is only reusable if it carries a `template` — a command with `{{placeholder}}`
+slots for the parts that vary. Prose alone is a note, not an invocation.
+
+1. **When**: you worked out a non-obvious command or sequence that you would otherwise re-derive next session.
+2. **Generalize**: decide which literals actually vary. Those become placeholders. Do not over-parameterize — a template with eight slots nobody fills is worse than a literal command.
+3. **Store it** as `type: skill` with `--template` (or the `template` parameter of whatever write tool your client exposes).
+4. **Verify** with `uma skill invoke <name> --set k=v` and check the printed command is what you meant.
+
+```bash
+uma skill invoke docker-build --set tag=v1   # expands; prints; does NOT execute
+```
+
+**UMA never executes a template.** Expansion returns text only; running it stays with whoever
+holds the approval. Missing placeholders are reported and left **visible** in the output, so an
+unfilled slot can never be silently blanked into a different command.
+
+Revising a skill: use `uma supersede`. The template is inherited unless you pass `--template`,
+so a revision cannot silently drop the invocation and leave an unusable skill.
+
 ### What NOT to Store
 
 - Ephemeral chat chatter or greetings.
@@ -75,6 +96,7 @@ extended with UMA-specific keys.
 | `id` | UMA | ULID identifier |
 | `scope` | UMA | `global` or `project:<name>` |
 | `supersedes` | UMA | ULID of the replaced predecessor fact |
+| `template` | UMA | **Only for `skill` facts**: an invocation command with `{{placeholder}}` slots |
 
 **Actors** follow OKF: `<producer>/<version>` for agents (`my-agent/1.0`),
 `human:<id>` for people, `process:<id>` for automation.
@@ -122,6 +144,18 @@ uma write --type decision --title "Use SQLite for BM25 Index" --desc "Index loca
 
 # Store a global user preference
 uma write --scope global --type preference --title "Preferred UI Library" --body "Always use Ratatui for terminal interfaces."
+
+# Store a REUSABLE SKILL: a command with {{placeholders}}
+uma write --type skill --title "docker-build" --desc "Build the service image" \
+  --template "docker build -t {{tag}} -f {{dockerfile}} ." --body "### When to use\n..."
+
+# Skills: list (shows required placeholders), inspect, and expand
+uma skill list                                    # -> docker-build  [tag, dockerfile]
+uma skill show docker-build                        # full fact, template included
+uma skill invoke docker-build --set tag=v1 --set dockerfile=Dockerfile
+#   -> prints:  docker build -t v1 -f Dockerfile .
+#   UMA NEVER RUNS IT. Run the command yourself so your own approval applies.
+uma supersede <old-id> --title "..." --body "..."   # inherits the template unless --template is given
 
 # Supersede a fact with a revised revision (old kept as deprecated)
 uma supersede <old-id> --title "New revision" --desc "One-line summary" --body "..."
