@@ -1,23 +1,23 @@
 ---
-id: 01M4EF7VZDSTMZVJBJ3VDTHRW9
+id: 01M4EFN11ZA3ZG026EAQ0XSEBZ
 scope: "project:mozek_rust"
 type: decision
 title: "Mozek uses embeddings only for News-tab summarization, never for search"
-description: Imported from dead-project session 01a09f1b; corrects scope and since of the first modal demo write.
+description: Imported from dead-project session 01a09f1b; restores the original 2026-09-14 origin after the pre-fix supersede reset it.
 tags:
   - mozek-rust
   - embeddings
   - architecture
 status: deprecated
-supersedes: 01M4EF3BYREPCY41FN5AMTYG8K
+supersedes: 01M4EF7VZDSTMZVJBJ3VDTHRW9
 generated:
   by: pi-agent/1.1
-  at: "2026-10-08T19:18:31.149255800+00:00"
+  at: "2026-10-08T19:25:42.335126400+00:00"
 verified:
   - by: "human:operator"
-    at: "2026-10-08T19:18:31.149255900+00:00"
-since: "2026-10-08T19:18:31.149781400+00:00"
-until: "2026-10-08T19:25:42.335689500+00:00"
+    at: "2026-10-08T19:25:42.335126600+00:00"
+since: "2026-10-08T19:25:42.335689500+00:00"
+until: "2026-10-08T19:34:32.177869600+00:00"
 ---
 ## Context
 

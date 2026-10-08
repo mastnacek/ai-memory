@@ -16,7 +16,13 @@ pub struct ChainStep {
     pub id: FactId,
     pub title: String,
     pub status: FactStatus,
+    /// When the claim's substance started to hold — inherited across
+    /// supersession, so every step of a chain can share one origin.
     pub since: DateTime<Utc>,
+    /// When this revision was written (its `generated.at`); the per-step
+    /// timestamp of revision history. Falls back to `since` for facts whose
+    /// frontmatter carries no `generated` event.
+    pub revised_at: DateTime<Utc>,
     pub until: Option<DateTime<Utc>>,
 }
 
@@ -51,6 +57,7 @@ fn step_of(fact: &Fact) -> ChainStep {
         title: fact.title.clone(),
         status: fact.status,
         since: fact.validity.since,
+        revised_at: fact.generated.as_ref().map(|g| g.at).unwrap_or(fact.validity.since),
         until: fact.validity.until,
     }
 }
@@ -72,10 +79,12 @@ fn successor_map<'a>(
         if !by_id.contains_key(&predecessor) {
             continue;
         }
+        // "Newer" means written later, not claiming a later origin: with
+        // `since` inherited across revisions, ordering by it would be a tie.
         let incumbent_is_newer = successors
             .get(&predecessor)
             .and_then(|existing| by_id.get(existing))
-            .map(|existing| existing.validity.since >= fact.validity.since)
+            .map(|existing| step_of(existing).revised_at >= step_of(fact).revised_at)
             .unwrap_or(false);
 
         if !incumbent_is_newer {
@@ -132,9 +141,9 @@ pub fn build_chains(facts: &[Fact], include_singletons: bool) -> Vec<Chain> {
     }
 
     chains.sort_by(|a, b| {
-        let a_since = a.tip().map(|s| s.since);
-        let b_since = b.tip().map(|s| s.since);
-        b_since.cmp(&a_since)
+        let a_time = a.tip().map(|s| s.revised_at);
+        let b_time = b.tip().map(|s| s.revised_at);
+        b_time.cmp(&a_time)
     });
 
     chains

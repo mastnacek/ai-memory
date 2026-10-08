@@ -97,7 +97,7 @@ pub fn run(args: TimelineArgs) -> Result<()> {
                 step.status,
                 step.id,
                 step.title,
-                step.since.format("%Y-%m-%d %H:%M"),
+                step.revised_at.format("%Y-%m-%d %H:%M"),
                 marker
             );
         }
@@ -117,6 +117,7 @@ fn chain_to_json(chain: &Chain) -> serde_json::Value {
             "title": step.title,
             "status": step.status.to_string(),
             "since": step.since.to_rfc3339(),
+            "revised_at": step.revised_at.to_rfc3339(),
             "until": step.until.map(|u| u.to_rfc3339()),
         })).collect::<Vec<_>>(),
     })

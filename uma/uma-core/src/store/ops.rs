@@ -42,14 +42,13 @@ impl Store {
     }
 
     /// Writes a revision chained to `old_id` **within this store**.
-    fn store_revision(
-        &self,
-        old_id: &FactId,
-        at: DateTime<Utc>,
-        mut new_fact: Fact,
-    ) -> Result<Fact> {
+    fn store_revision(&self, old_id: &FactId, mut new_fact: Fact) -> Result<Fact> {
         new_fact.supersedes = Some(*old_id);
-        new_fact.validity.since = at;
+        // The claim's origin (`since`) is the caller's decision: a revision
+        // restates an existing claim, so it inherits the predecessor's origin
+        // unless the caller explicitly overrides it (e.g. an import restoring
+        // a session's date). Resetting it here silently moved every claim's
+        // origin to the moment of its latest revision.
         new_fact.status = FactStatus::Stable;
         self.write(&new_fact)?;
         Ok(new_fact)
@@ -65,7 +64,7 @@ impl Store {
     pub fn supersede_within(&self, old_id: &FactId, new_fact: Fact) -> Result<Fact> {
         let now = Utc::now();
         self.retire(old_id, now)?;
-        self.store_revision(old_id, now, new_fact)
+        self.store_revision(old_id, new_fact)
     }
 
     /// Supersedes a fact whose location is unknown: finds the predecessor, retires
@@ -82,7 +81,7 @@ impl Store {
 
         let now = Utc::now();
         old_store.retire(old_id, now)?;
-        self.store_revision(old_id, now, new_fact)
+        self.store_revision(old_id, new_fact)
     }
 
     /// Reads a fact from its Markdown file.

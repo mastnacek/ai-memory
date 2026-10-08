@@ -90,15 +90,23 @@ fn supersede_roundtrip_retires_the_predecessor_and_chains_the_revision() -> anyh
     );
     store.write(&original)?;
 
-    let revision = fact(
+    let mut revision = fact(
         "Use pnpm for dependency installation",
         "Dependencies are installed with pnpm.",
     );
+    // As the supersede slice does: a revision restates the claim, so it
+    // inherits the predecessor's origin unless explicitly overridden.
+    revision.validity.since = original.validity.since;
     let stored = store.supersede_within(&original.id, revision)?;
 
     // The revision is active and chains back to what it replaced.
     assert_eq!(stored.supersedes, Some(original.id));
     assert_eq!(stored.status, FactStatus::Stable);
+
+    // The claim's origin survives the supersession: a revision restates the
+    // claim, so it has been true since the predecessor said it was. Only an
+    // explicit caller override (imports) may move `since`.
+    assert_eq!(stored.validity.since, original.validity.since);
 
     // The predecessor is deprecated with a closed validity window, never deleted.
     let retired = store.read_by_id(&original.id)?;
