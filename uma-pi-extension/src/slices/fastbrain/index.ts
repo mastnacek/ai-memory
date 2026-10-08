@@ -20,6 +20,7 @@ import type { ExtensionState } from "../../shared/types.js";
 import { runUma, findUmaBinary } from "../../shared/client.js";
 import {
   buildRecallMessage,
+  formatGateDecision,
   type RecallVerdict,
 } from "./policy.js";
 
@@ -40,7 +41,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | undefined>
 }
 
 export function registerFastbrainHook(pi: ExtensionAPI, state: ExtensionState): () => void {
-  const unsubscribe = pi.on("before_agent_start", async (event) => {
+  const unsubscribe = pi.on("before_agent_start", async (event, ctx) => {
     // Operator toggle (default off — S3 stays paused unless reopened).
     if (!state.config.recallGate) return undefined;
     if (isCommand(event.prompt)) return undefined;
@@ -54,12 +55,26 @@ export function registerFastbrainHook(pi: ExtensionAPI, state: ExtensionState): 
           : ["recall", "check", "--json", event.prompt];
 
       const output = await withTimeout(runUma(binPath, judgeArgs, process.cwd()), GATE_TIMEOUT_MS);
-      if (!output || output.code !== 0) return undefined;
+      if (!output) {
+        ctx.ui.notify("🧠 recall gate timed out — memory skipped this turn", "warning");
+        return undefined;
+      }
+      if (output.code !== 0) {
+        ctx.ui.notify(`🧠 recall gate unavailable: ${output.stderr.split("\n")[0] || "unknown error"}`, "warning");
+        return undefined;
+      }
 
       const verdict = JSON.parse(output.stdout) as RecallVerdict;
+      // The operator sees the decision: what was asked, what the judge
+      // answered, what happens next. UI-only — the model never sees this.
+      ctx.ui.notify(
+        formatGateDecision(event.prompt, verdict, lang),
+        verdict.note ? "warning" : "info",
+      );
       return buildRecallMessage(verdict, lang);
     } catch {
       // The gate is advisory: any failure means "no recall", never "no run".
+      ctx.ui.notify("🧠 recall gate failed — memory skipped this turn", "warning");
       return undefined;
     }
   });
