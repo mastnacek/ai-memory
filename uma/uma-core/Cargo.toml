@@ -1,0 +1,20 @@
+[package]
+name = "uma-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+ulid.workspace = true
+chrono.workspace = true
+yaml-rust2.workspace = true
+hashlink.workspace = true
+walkdir.workspace = true
+directories.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile = "3.10"

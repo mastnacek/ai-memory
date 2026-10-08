@@ -1,0 +1,606 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/vshulcz/deja-vu/main/assets/logo-dark.svg">
+    <img src="https://raw.githubusercontent.com/vshulcz/deja-vu/main/assets/logo.svg" width="280" alt="deja-vu">
+  </picture>
+</p>
+
+<p align="center"><b>Your coding agents stop re-debugging what you already fixed.</b></p>
+
+<p align="center">Claude Code, Codex, Cursor and 35 more agents already save every session to disk.
+deja indexes all of it, months back, and hands the part that matters
+to whichever agent is working now.</p>
+
+<p align="center">English | <a href="docs/readme/README.zh.md">简体中文</a> | <a href="docs/readme/README.zh-TW.md">繁體中文</a> | <a href="docs/readme/README.ja.md">日本語</a> | <a href="docs/readme/README.ko.md">한국어</a> | <a href="docs/readme/README.es.md">Español</a> | <a href="docs/readme/README.pt.md">Português</a> | <a href="docs/readme/README.fr.md">Français</a> | <a href="docs/readme/README.de.md">Deutsch</a> | <a href="docs/readme/README.ru.md">Русский</a> | <a href="docs/readme/README.tr.md">Türkçe</a> | <a href="docs/readme/README.hi.md">हिन्दी</a></p>
+
+<p align="center"><img src="https://raw.githubusercontent.com/vshulcz/deja-vu/main/assets/demo.gif" width="720" alt="The same question put to the same agent twice: without memory it has no record of it, with deja it answers with the decision from eight months earlier"></p>
+
+<p align="center"><sub><em>Nobody searched anything — the agent called deja itself. Two real runs against a synthetic corpus: nobody's history is published.</em></sub></p>
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/vshulcz/deja-vu/main/install.sh | sh
+deja install --auto
+```
+
+<p align="center"><sub>macOS and Linux; ten seconds to install, about ten to index &middot;
+<a href="#install">Windows, Homebrew, npm and the rest</a></sub></p>
+
+<table align="center">
+<tr>
+<td align="center" width="33%">Recall<br><b>97.2% R@5</b> on LongMemEval-S<br><sub>MemPalace publishes 96.6%, agentmemory 95.2%</sub></td>
+<td align="center" width="33%">Tokens<br><b>half the tokens</b> of agentmemory<br><sub>on a task this machine had already solved</sub></td>
+<td align="center" width="33%">Index time<br><b>17.6 s</b> to index 19,195 sessions<br><sub>the next of seven tools takes 72 s</sub></td>
+</tr>
+</table>
+
+<p align="center"><sub>I maintain deja-vu, so every driver, the corpus and the scoring rule are in this repository &middot;
+<a href="https://vshulcz.github.io/deja-vu/guide/day-zero.html">the head-to-head, and how to re-run a row you doubt</a> &middot;
+<a href="https://vshulcz.github.io/deja-vu/guide/benchmarks.html">every run</a></sub></p>
+
+<p align="center">
+  <a href="https://github.com/vshulcz/deja-vu/actions/workflows/ci.yml"><img src="https://github.com/vshulcz/deja-vu/actions/workflows/ci.yml/badge.svg?branch=main&event=push" alt="CI"></a>
+  <a href="https://github.com/vshulcz/deja-vu/releases"><img src="https://img.shields.io/github/v/release/vshulcz/deja-vu" alt="Release"></a>
+  <a href="https://mcptoplist.com/server/io.github.vshulcz%2Fdeja-vu"><img src="https://mcptoplist.com/badge/io.github.vshulcz%2Fdeja-vu.svg" alt="MCP Toplist"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
+</p>
+
+<p align="center"><a href="https://vshulcz.github.io/deja-vu/">Docs</a> &middot; <a href="https://vshulcz.github.io/deja-vu/guide/benchmarks.html">Benchmarks</a> &middot; <a href="https://vshulcz.github.io/deja-vu/guide/compare.html">How it compares</a> &middot; <a href="docs/INTEGRATING.md">Building it into your tool</a></p>
+
+<p align="center"><sub>Found it useful? <a href="https://github.com/vshulcz/deja-vu">Star deja-vu on GitHub</a>.</sub></p>
+
+## Highlights
+
+- **Starts full.** Months of history from before you installed it are searchable on day one: `deja "connection pool exhausted"` over gigabytes.
+- **One memory, every agent.** A fix found in Codex comes back in Claude Code, Cursor or opencode; all [thirty-eight agents](#supported-harnesses) read the same index.
+- **Nobody has to ask.** Recall arrives at session start, before a file is edited or a command runs, and after a command fails.
+- **Survives compaction.** Over 43 measured compactions the summary kept 77% of the decisions and 0.2% of the commands; deja hands back the rest ([how](docs/compaction.md)).
+- **Indexes the work, not just the talk.** The files each turn opened, the commands with their exit status, the exact spans an edit replaced.
+- **Knows what held.** `deja promote <id> --state rejected` marks a reverted decision, and every later hit says it was tried and why it was dropped; `--state accepted` takes the mark back.
+- **Says when the ground moved.** A hit reports *4 files this session touched have changed since*, and stays quiet when it cannot tell.
+- **Local and private.** No model, no embeddings, no server. Keys and tokens are stripped as the index is built ([privacy](#privacy)).
+- **Moves with you.** `deja sync ssh laptop` between machines, no cloud in between; `deja handoff --to codex` to continue in another agent.
+- **One Go binary.** macOS, Linux and Windows, through Homebrew, Scoop, winget, npm or `go install`.
+
+### Your own work, wrapped
+
+`deja stats --card` draws it in the terminal; give it a filename and it writes an
+SVG for a profile README. To post it anywhere else, [turn it into a
+PNG](https://vshulcz.github.io/deja-vu/card/) — that page converts it in your own
+browser.
+
+<p align="center"><img src="https://raw.githubusercontent.com/vshulcz/deja-vu/main/docs/assets/stats-card-demo.svg" width="600" alt="deja stats card: a year of agent sessions as a heatmap, the agents they came from, and the longest one"></p>
+
+The full feature reference lives in the [docs](https://vshulcz.github.io/deja-vu/).
+
+## Install
+
+The two commands at the top are the whole install on macOS and Linux:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/vshulcz/deja-vu/main/install.sh | sh
+deja install --auto
+```
+
+<p align="center"><img src="https://raw.githubusercontent.com/vshulcz/deja-vu/main/assets/banner.png" width="700" alt="What deja prints after the first index: the mark, the agents it found, and a query taken from your own history"></p>
+
+Ten seconds to install, about ten to index, and it is useful. The second command wires MCP
+recall into every agent it finds, turns on session-start recall where the agent supports
+it, and builds the first index so the next session does not pay for it.
+
+Start a new agent session and ask it something you worked on months ago:
+
+> have we dealt with jwt refresh rotation before? check your memory
+
+It does not have to be asked, either — with auto-recall the agent already knows what you
+solved in that project when the session opens.
+
+<details>
+<summary>Other ways to install, and what to do if you want less than all of it</summary>
+
+`brew install deja-vu`, `go install github.com/vshulcz/deja-vu/cmd/deja@latest`,
+or `npx @vshulcz/deja-vu "query"` to try it without installing anything. Desktop apps that
+take MCP servers as bundles can open the `.mcpb` from the
+[latest release](https://github.com/vshulcz/deja-vu/releases/latest); it carries the binary.
+
+Claude Code, Cursor, Qwen and OpenClaw can take the same plugin bundle from
+their own marketplaces instead (Codex has a bundle of its own, in the table under
+[Harnesses with a package of their own](#harnesses-with-a-package-of-their-own)).
+Copilot CLI installs it too but takes only the skill, so use `deja install copilot-auto` there:
+
+```sh
+claude plugin marketplace add vshulcz/deja-vu && claude plugin install deja-vu@deja-vu
+```
+
+On Windows the install script exits with `unsupported OS` — it is a shell script. Use
+Scoop, from the main bucket every Scoop install already has, or winget, which ships with Windows:
+
+```powershell
+scoop install deja-vu
+winget install vshulcz.deja-vu
+```
+
+Or take `deja-vu_<version>_windows_amd64.zip` from the
+[latest release](https://github.com/vshulcz/deja-vu/releases/latest) and put `deja.exe` on
+your `PATH`, e.g. in `%USERPROFILE%\.local\bin`.
+
+The binary alone is a complete install for searching: index, search, `show`, `ctx`, `blame`,
+`--json` and redaction need nothing else. `deja install` is what wires MCP into your agents
+and turns on session-start recall — worth having, and optional. On a binary-only setup
+`deja doctor` reports every MCP target as `not-wired`, which is that setup working as
+intended. `deja warmup` also leaves a skill at `~/.agents/skills/deja-search/SKILL.md`
+that teaches an agent the CLI contract — `deja search --json`, `ctx`, `blame`, how to read
+`tier` and `total` — so it knows history is searchable without MCP. The copy in the repo is
+[`skills/deja-search/SKILL.md`](skills/deja-search/SKILL.md).
+
+`deja install --all` is `--auto` without the session-start recall: agents answer from memory
+when they decide to call it, rather than starting each session with it. The
+[agent setup guide](https://vshulcz.github.io/deja-vu/guide/agents.html) covers what each
+harness supports, aider's read-only context file, and the Windows `cmd /c deja mcp` wrapper.
+
+</details>
+
+<details>
+<summary>What gets written into each agent's own guidance file</summary>
+
+Install also writes user-level guidance for the harnesses it detects: Claude Code, Codex, opencode, Gemini CLI, Antigravity, Qwen, Kimi Code, pi, Senpi, Copilot, VS Code Copilot Chat, Cursor, Goose, OpenClaw, Hermes, Roo Code, omp, Amp, prime-agent, DeepSeek Harness, Continue, Crush, CodeBuddy Code, WorkBuddy, Zed, TRAE CLI, TRAE IDE, Muse Code, CodeWhale and ZCode each get it in their own guidance file (or under the configured `XDG_CONFIG_HOME`). Re-run rewrites deja's skill or marked block without changing surrounding user content. Use `deja install --all --no-guidance` to opt out; Grok Build gets the shared skill in `~/.agents/skills`, which is what it reads; the `~/.grok/GROK.md` written beside it is for the unrelated community CLI that shares that directory. Cursor has no user-level instructions file, so it gets the shared skill in `~/.agents/skills` — one of the four places Cursor reads skills from — read only when something looks relevant rather than every session. Kilo Code, gajae-code, Kimchi, Command Code, Cherry Studio and Reasonix get the skill, and Kiro the skill and a steering file, from their own install target.
+
+</details>
+
+## Privacy
+
+Indexing and search are local. The network is used only by `deja update`, `deja sync ssh`,
+the version check in `deja doctor`, and `deja embed` against an endpoint you configure.
+
+Credentials are stripped as the index is built: cloud and provider keys, tokens and JWTs,
+PEM blocks, passwords in URLs or stated in prose. Each becomes `[redacted:<kind>]` and the
+text around it stays searchable. The source transcripts still hold them
+([one machine had 84 in 42 sessions](https://vshulcz.github.io/deja-vu/guide/credentials-in-transcripts.html)):
+`deja secrets` names those sessions without printing a value, and `deja secrets --scrub`
+rewrites the ones it can, keeping the original beside the file.
+
+`deja forget` drops sessions and keeps them dropped across rebuilds. `~/.config/deja/exclude`
+skips a project per line, or a whole store with `harness:opencode`. The
+[security model](docs/SECURITY-MODEL.md) has the data flows and what redaction cannot catch.
+
+## CLI
+
+```text
+$ deja "jwt refresh token"
+[claude] api        · Jul 8 · 8f31c0a9 — 2 matches
+  login started failing after refresh token rotation; jwt kid mismatch in tests
+  fixed by reloading jwks cache after rotateKey and adding a clock-skew test
+[codex]  web        · Jul 1 · b77d91e2 — 1 match
+  refresh token cookie needed SameSite=Lax in local callback flow
+```
+
+**Ask your history**
+
+| Command | What it does |
+| --- | --- |
+| `deja <query>` | Search every history. Multi-word is AND and quoted phrases require contiguous text; a query with no exact match then tries word forms and close spellings, which is where a substring reaches its word (`code` finds `opencode`). |
+| `deja` | With an index and a terminal: today's sessions, recalls served, a question you asked in more than one session, and a wall your agents keep hitting. |
+| `deja wip` | What the last session in this directory was doing: the task, what it settled, the files in flight, the last command and whether it failed — derived from the transcript, not from a note someone remembered to write. |
+| `deja blame <path>[:line]` | Which sessions discussed a file, what was decided, and why. With a line: the commit that last changed it, and the session that wrote that line or the text the commit replaced. `--attribution` prints the line answer alone, as JSON with `--json`, and `--git-note` records it in `refs/notes/deja`. |
+| `deja files <topic>` | The other direction: which files the work on a subject actually touched. |
+| `deja how <tool>` | How this machine actually runs a thing, with the real flags, from what agents ran before. |
+| `deja fix <error>` | What this machine ran after that same error before, when the error did not come back. Never a merge, a force push or a deletion. |
+| `deja friction` | Errors that hit three or more separate sessions, with the harnesses named. |
+
+<details>
+<summary>Using what it finds, and moving it between machines</summary>
+
+**Use what it finds**
+
+| Command | What it does |
+| --- | --- |
+| `deja ctx <query>` | Markdown digest of the best match, ready to pipe into a prompt. |
+| `deja recall <words>` | The page the MCP recall tool gives an agent: about 4 KB, this project first. For skills and scripts that run deja through the shell. |
+| `deja resume <id>` | Reopen a found session in its native harness. |
+| `deja restore <path>` | Hand back a span an agent replaced, from the `old_string` its edit recorded. Never writes over the original. |
+| `deja promote <id>` | Distill a session into a curated note with provenance, tags and a lifecycle state. Notes outrank raw transcripts. |
+| `deja share <id>` | A sanitized session digest for a colleague, with secrets already scrubbed. |
+
+**Move it and check it**
+
+| Command | What it does |
+| --- | --- |
+| `deja sync export/import/ssh` | Move memory between machines. Watermarked, append-only, idempotent. |
+| `deja view` | Your whole memory as one local HTML file. No server, and the file never leaves the machine. |
+| `deja stats` | Your agent work, wrapped. `--card` draws it in the terminal, `--card <file>.svg` writes one for a profile, `--html` a browsable timeline. |
+| `deja secrets [--scrub]` | Which sessions' source transcripts carry credentials, and what kind. Never prints a value. `--scrub` rewrites the ones it can, original kept beside the file. |
+| `deja rules [sync]` | Keep your standing rules in `~/.config/deja/rules.md`; `sync` copies them as a marked block into every installed agent's global rules file. |
+| `deja rules candidates [--json] [--limit n] [--since 90d]` | The turns where you corrected an agent, across every tool, numbered with their session. Ask your agent to suggest rules and it groups them; nothing is written until you pick. |
+| `deja doctor [--deep]` | Self-diagnosis, and with `--deep`, proof of the index against the sources. |
+| `deja mcp` | The stdio MCP server, which is what `deja install` wires in. |
+
+</details>
+
+Full reference: [commands](https://vshulcz.github.io/deja-vu/guide/commands.html) and
+[JSON output](docs/json-output.md).
+
+### MCP tools
+
+The server exposes one tool, `deja`, with a `mode`; `deja install` wires it in. One tool
+costs 477 tokens of definitions a turn, against 8,283 for the largest of the seven servers
+measured in [day zero](https://vshulcz.github.io/deja-vu/guide/day-zero.html). The six
+older tool names (`recall`, `recall_context`, `blame`, `fix`, `how`, `remember`) still answer.
+
+<details>
+<summary>Arguments and return shapes</summary>
+
+| Tool | Arguments | Returns |
+| --- | --- | --- |
+| `deja` | `mode`, `q`, `harness?`, `project?`, `limit?` | Depends on the mode, below. |
+
+`q` carries whatever the mode asks about. The per-mode names below are still
+accepted; they are no longer declared, because the schema is read every turn
+whether or not the tool is called.
+
+| Mode | `q` is | Also reads | Returns |
+| --- | --- | --- | --- |
+| `recall` | the question, or an exact error string, name or flag | `harness?`, `limit?`, `offset?` | Dense matching snippets, capped at 4KB. |
+| `context` | the same as recall | `harness?` | Markdown digest of the best-matching session. |
+| `blame` | a file path | `harness?`, `project?`, `since?`, `limit?`, `all?` | Sessions that discussed a file. |
+| `fix` | the failing output, verbatim | `limit?` | What this machine ran, or changed, after that same error before. |
+| `how` | the tool or target, e.g. `go test` | `project?`, `limit?` | The real invocation, from what agents ran here. |
+| `orient` | nothing — it asks about the project | `project?`, `limit?` | The commands past sessions ran here and the files they worked in. |
+| `remember` | one durable fact or decision | `project?`, `tags?` | Stores a durable decision for later recall. |
+| `handoff` | a session id or harness name; empty for the newest session here | `harness?` | Another session's goal, standing instructions, latest conclusions, passed checks and where it stopped, to continue it. |
+
+</details>
+
+## Supported harnesses
+
+<!-- matrix:start -->
+aider &middot; Amp &middot; Antigravity &middot; Claude Code &middot; Cline &middot; Codex CLI &middot; Copilot CLI &middot; VS Code Copilot Chat &middot; Cursor &middot; DeepSeek Harness &middot; Gemini CLI &middot; Goose &middot; Grok Build &middot; Hermes &middot; Kimi Code &middot; omp (Oh My Pi) &middot; OpenClaw &middot; opencode &middot; Continue &middot; Crush &middot; pi &middot; prime-agent (PrimeIntellect) &middot; Qwen Code &middot; Cherry Studio &middot; Senpi &middot; gajae-code &middot; Kimchi Coding &middot; Command Code &middot; ZCode &middot; Kiro &middot; Kilo Code &middot; Roo Code &middot; Zed &middot; CodeWhale &middot; CodeBuddy Code &middot; Reasonix &middot; TRAE CLI &middot; Muse Code.
+
+<details>
+<summary>What each one supports</summary>
+
+| Harness | MCP recall | Auto-recall | Skill | Command | Resume | Handoff | Needs |
+| --- | :-: | :-: | :-: | :-: | :-: | :-: | --- |
+| aider | ⚠ | ✅ | ✕ | ⚠ | ✕ | ✅ | deja aider |
+| Amp | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | threads from 0.0.1774963753 on live on ampcode.com; deja reads those its plugin has written out, and older local ones |
+| Antigravity | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
+| Claude Code | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
+| Cline | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
+| Codex CLI | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
+| Copilot CLI | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
+| VS Code Copilot Chat | ✅ | ✅ | ✅ | ✅ | ✕ | ✅ | — |
+| Cursor | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | sqlite3 (IDE chats, CLI tool output) |
+| DeepSeek Harness | ✅ | ✅ | ✅ | ✅ | ✕ | ✅ | zstd |
+| Gemini CLI | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
+| Goose | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | deja goose |
+| Grok Build | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | sqlite3 (grok-dev store) |
+| Hermes | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | sqlite3 |
+| Kimi Code | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
+| omp (Oh My Pi) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
+| OpenClaw | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | sqlite3 (2026.8+ store); zstd for .zst archives |
+| opencode | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | sqlite3 |
+| Continue | ✅ | ⚠ | ✅ | ✅ | ✅ | ✅ | — |
+| Crush | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | sqlite3 |
+| pi | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
+| prime-agent (PrimeIntellect) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
+| Qwen Code | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | — |
+| Cherry Studio | ✅ | ✅ | ✅ | ✕ | ✕ | paste | import the server once in Settings -> MCP; enable the skill for the agent |
+| Senpi | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | none |
+| gajae-code | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | none |
+| Kimchi Coding | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | none |
+| Command Code | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | none |
+| ZCode | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | sqlite3 for the CLI database |
+| Kiro | ✅ | ✅ | ✅ | ? | ✅ | ✅ | sqlite3 for the CLI database |
+| Kilo Code | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | sqlite3 for the CLI store |
+| Roo Code | ✅ | ✕ | ✅ | ✅ | ✅ | paste | roo CLI (editor tasks reopen in the editor) |
+| Zed | ✅ | ✕ | ✅ | ✅ | ✕ | paste | sqlite3 + zstd |
+| CodeWhale | ✅ | ✅ | ✅ | ? | ✅ | ✅ | none |
+| CodeBuddy Code | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | none |
+| Reasonix | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | zstd for 1.x sessions |
+| TRAE CLI | ✅ | ✅ | ✅ | ? | ✅ | ✅ | none |
+| Muse Code | ✅ | ✅ | ✅ | ? | ✅ | ✅ | none |
+
+✅ works &middot; — possible, not built yet &middot; ✕ the harness has no such mechanism &middot; ⚠ waiting on the harness itself &middot; ? not investigated
+
+</details>
+<!-- matrix:end -->
+
+TRAE IDE is wired, not read: its chats are in an encrypted database. `deja install trae-ide`
+adds the MCP server and the skill, and `trae-ide-auto` adds hooks, which TRAE IDE runs only
+after you turn them on in Settings > Hooks.
+
+Custom store locations go through `DEJA_*_ROOT` variables, and each agent's own relocation
+variable is honored too. The
+[session format registry](https://vshulcz.github.io/deja-vu/registry/README.html) documents
+the observed paths, record schemas and role mapping per harness, with synthetic fixtures
+keeping those descriptions checked against the parsers.
+
+### Harnesses with a package of their own
+
+`deja install --auto` wires every one of these like every other harness, and
+that stays the shortest path. They also have a package in their own ecosystem,
+for people who install extensions there rather than from a CLI:
+
+| Harness | Package | Install |
+| --- | --- | --- |
+| opencode | npm `opencode-deja` | `opencode plugin opencode-deja` |
+| DeepSeek Harness | npm `dsh-deja` | `dsh plugin --profile web add dsh-deja` |
+| Zed | `deja-context-server` | Zed → Extensions → deja |
+| Kimi Code | plugin `deja` | `/plugins install https://github.com/vshulcz/deja-vu` |
+| Codex CLI | plugin `deja-vu` | `codex plugin marketplace add https://github.com/vshulcz/deja-vu` then `codex plugin add deja-vu@deja-vu` |
+| Grok Build | plugin `deja` | `grok plugin marketplace add xai-org/plugin-marketplace` then `grok plugin install deja` |
+| OpenClaw | ClawHub and npm `@vshulcz/openclaw-deja` | `openclaw plugins install clawhub:@vshulcz/openclaw-deja` |
+| pi (and omp) | npm `@vshulcz/pi-deja` | `pi install npm:@vshulcz/pi-deja` |
+| Hermes | memory provider `deja-memory`, in the Hermes plugin catalog | `hermes plugins install deja-vu`, or from GitHub: `hermes plugins install vshulcz/deja-vu/extensions/hermes` |
+
+Either path works alone, and both together double nothing: each package reads what
+`deja install` already wrote and uses the deja you already have.
+
+The same search is also a skill, for any agent that loads a `SKILL.md`:
+
+```sh
+npx skills add https://github.com/vshulcz/deja-vu --skill deja-search   # skills CLI: Claude Code, Cursor, Goose, Copilot…
+openclaw skills install @vshulcz/deja-search                            # ClawHub
+hermes skills install vshulcz/deja-vu/skills/deja-search                # Hermes
+```
+
+The skill drives the `deja` binary from the install step above; it does not bundle one.
+
+## Semantic recall (optional)
+
+Point `deja embed` at a local Ollama, LM Studio or OpenAI-compatible endpoint with
+`DEJA_EMBED_URL` and rephrased queries still hit. Without a reachable runtime, lexical
+search and MCP recall continue unchanged. OpenAI Platform works with its standard key:
+
+```sh
+export OPENAI_API_KEY='sk-...'
+export DEJA_EMBED_URL='https://api.openai.com/v1/embeddings'
+export DEJA_EMBED_MODEL='text-embedding-3-small'
+deja embed
+```
+
+<details>
+<summary>Local runtimes, other endpoints, and what vectors cost</summary>
+
+With no `DEJA_EMBED_URL` set, deja probes `localhost:11434` and `localhost:1234`,
+so a machine already running Ollama or LM Studio is picked up without being asked.
+`DEJA_EMBED_OFF=1`, or `DEJA_EMBED_URL=off`, turns that probe off — any other
+configured `DEJA_EMBED_URL` still wins.
+
+For another authenticated OpenAI-compatible endpoint, set `DEJA_EMBED_KEY` explicitly:
+
+```sh
+export DEJA_EMBED_URL='https://example.com/v1/embeddings'
+export DEJA_EMBED_MODEL='embedding-model'
+export DEJA_EMBED_KEY='...'
+deja embed
+```
+
+`DEJA_EMBED_KEY` takes precedence. `OPENAI_API_KEY` is used automatically only for an
+HTTPS `api.openai.com` URL; it is never implicitly sent to local or third-party endpoints.
+
+The sidecar sits beside the index as `.vectors.bin`, not inside `index.db`. Float32 vectors
+cost roughly 4 MB per 1k messages for a 1,024 dimension model. A remote endpoint receives
+the redacted indexed text, truncated to about 2k characters, but never raw source files.
+With Ollama or LM Studio, embedding stays local and needs no key.
+
+</details>
+
+## Proof
+
+Millisecond lookups, and on LongMemEval-S 88.1% hit@1 (470-question cleaned set) and 87.4% hit@1 on all 500 questions;
+on LoCoMo retrieval, 70.5% hit@1. On a task this machine had already solved, 58% fewer
+tokens: eleven runs an arm, 53,558 against 126,222 with nothing wired, and 52,815 against
+103,443 on a later build with the arms alternated. Both retrieval harnesses ship in this repo
+and run on the public datasets in minutes: [benchmarks](https://vshulcz.github.io/deja-vu/guide/benchmarks.html) ·
+[what one task costs](https://vshulcz.github.io/deja-vu/guide/day-zero.html).
+
+The rest is measured by `deja bench`:
+
+```sh
+deja bench recall     # ranking floor: 100 queries, half Russian, CI fails if recall drops
+deja bench context    # 30 seeded task chains plus five negative controls
+deja bench block      # does the answer survive into what deja hands over
+deja bench prompt     # what the per-prompt hook fires on, and what it fires on wrongly
+deja bench ingest     # what an update costs: unchanged, a turn, a new transcript, a rename, a rewrite
+deja bench read       # what it costs to read a database-backed store, and what one long value does to it
+```
+
+<details>
+<summary>What the in-repo benches measure, and lookup cost on a real store</summary>
+
+`bench block` asks the question the others cannot: with the right session in
+hand, does the block carry what that session settled. Eight sessions discuss each
+subject and one of them settles it, in the middle of its own transcript rather
+than at the end — so the baseline arm, the newest turns of the top hit, scores
+zero and an arm above zero had to choose.
+
+| Arm | Carries the answer | Median tokens |
+|---|---|---|
+| `deja-block` (session-start block) | 1.00 | 665 |
+| `deja-digest` (context digest) | 1.00 | 1656 |
+| `newest-turn` (baseline) | 0.00 | 289 |
+| `cold` | 0.00 | 0 |
+
+
+The context experiment compares deja-recall against full-history, naive grep and cold
+context. With the default seed:
+
+| Arm | Median tokens | Median coverage | Negative-control tokens |
+| --- | ---: | ---: | ---: |
+| deja-recall | 1,096 | 1.00 | 0 |
+| full-history | 80,547 | 1.00 | 78,145 |
+| naive-grep | 273,238 | 1.00 | 0 |
+| cold | 0 | 0.00 | 0 |
+
+Same fact coverage as grepping the raw logs for about 250x fewer tokens, and about 70x
+fewer than replaying the matched sessions in full, while injecting nothing on the chains
+where no prior fact is relevant. The corpus generator and the relevance labels are
+ordinary reviewed Go. Audit what "relevant" means before trusting any figure, ours
+included.
+
+Measured on a real store of 2,419 sessions and 179k messages, 1.9 GB of
+transcripts:
+
+| Measurement | Result |
+| --- | --- |
+| Lookup, in process | **0.7–0.8 ms** median (`deja bench recall`, 100 queries, half of them Russian), ~15 ms on the LongMemEval-S haystacks |
+| `deja <query>`, end to end | ~0.2 s median on that store: process start, the freshness check over every store, ranking, printing |
+| Freshness check alone | ~50 ms when nothing changed |
+| Index size | 200 MB, ~10% of corpus |
+
+The same store has since grown to 2,754 sessions, 358k messages and 5.7 GB.
+A cold full build over it takes 71 s and writes a 232 MB index — 4% of the
+corpus, because the share falls as transcripts repeat themselves — and the
+end-to-end median is unchanged at 0.25 s.
+
+The index is incremental. When a session file grows, only that file is re-read.
+
+</details>
+
+## How it works
+
+Local inverted index in `~/.cache/deja`: parse the JSONL and SQLite stores, redact
+credentials, write `records.bin` plus token buckets, and track per-file state in
+`manifest.gob` so repeat runs only ingest what changed. The MCP server, stats, share and
+sync all read that one index. Details in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## FAQ
+
+<details>
+<summary><b>Does anything leave my machine?</b></summary>
+
+No, unless you ask it to. See the
+[data flows](docs/SECURITY-MODEL.md#data-flows).
+
+</details>
+
+<details>
+<summary><b>What about secrets already in my logs?</b></summary>
+
+They stay in the original harness files, which
+are your agent's data; `deja secrets` names the sessions that carry them so you can rotate
+and delete, and `--scrub` rewrites the transcripts it can reach. Known shapes — AWS keys, `api_key=`/`token=` assignments, bearer
+tokens and bare JWTs, PEM blocks, provider tokens, high-entropy values — are stripped as
+the index is built, so they do not reach digests, shares or sync exports. Pattern matching
+is not secret detection: a shape it does not know can pass through. See the
+[security model](docs/SECURITY-MODEL.md#redaction-boundary).
+
+</details>
+
+<details>
+<summary><b>Will it slow my agent down?</b></summary>
+
+A recall is a lexical lookup against a local index:
+0.7–0.8 ms median, and nothing waits on a model. A hook adds the process start and a
+freshness check over your stores on top of that — tens of milliseconds on a store of
+a few gigabytes.
+
+</details>
+
+<details>
+<summary><b>Do I have to change how I work?</b></summary>
+
+No. The agent calls recall itself, and with
+auto-recall it already knows the project's prior decisions when the session opens.
+
+</details>
+
+<details>
+<summary><b>How is this different from the other memory tools?</b></summary>
+
+| | deja | Memory platforms<br>(Mem0, Letta, memU) | Session search<br>(cass) |
+| --- | :-: | :-: | :-: |
+| Knows work from before you installed it | yes | no | yes |
+| Capture step | none, the transcripts are the memory | the agent or your code writes facts | none |
+| Needs an LLM or embedding key | no | yes | optional |
+| Recalls without being asked | at session start and before a tool runs | no | no |
+
+[engram](https://github.com/Gentleman-Programming/engram) is the strongest of the
+record-forward tools and worth your time if that model fits you; it still starts empty and
+knows only what an agent chose to save. The
+[full comparison](https://vshulcz.github.io/deja-vu/guide/compare.html) covers 15 of them.
+
+</details>
+
+<details>
+<summary><b>Where is Claude Code session history stored, and can I search it?</b></summary>
+
+Under
+`~/.claude/projects`, one JSONL file per session; Codex keeps `~/.codex/sessions`, Cursor a
+SQLite `state.vscdb`. `deja search` reads them all in place, `deja last` lists the recent
+sessions of every agent, and `deja view` opens the whole history as one local page. Paths
+for each agent: [where sessions are stored](https://vshulcz.github.io/deja-vu/guide/where-sessions-are-stored.html).
+
+</details>
+
+<details>
+<summary><b>My Claude Code session history disappeared. Is it gone?</b></summary>
+
+Claude Code deletes transcripts
+older than 30 days (`cleanupPeriodDays` in `~/.claude/settings.json`), and `claude --resume` lists
+only what is left. A session deja indexed before the cleanup stays searchable after the
+file is gone. Details: [session files on disk](https://vshulcz.github.io/deja-vu/guide/session-files-on-disk.html).
+
+</details>
+
+<details>
+<summary><b>What about Windows?</b></summary>
+
+Builds exist and CI runs the suite there. macOS and Linux are the
+battle-tested paths. Field reports welcome in [#9](https://github.com/vshulcz/deja-vu/issues/9).
+
+</details>
+
+<details>
+<summary><b>How do I wipe everything?</b></summary>
+
+```sh
+deja uninstall --all
+rm -rf ~/.cache/deja
+```
+
+</details>
+
+## Guides
+
+Written for the situation rather than the feature:
+
+- [Does your agent remember previous conversations?](https://vshulcz.github.io/deja-vu/guide/does-my-agent-remember.html) — what each agent keeps between sessions, and what it drops
+- [Session files on disk](https://vshulcz.github.io/deja-vu/guide/session-files-on-disk.html) — how big `~/.claude/projects` gets, and what deleting it costs
+- [The agent lost the context you had](https://vshulcz.github.io/deja-vu/guide/lost-context.html) — after a crash, a clear, or a session that came back empty
+- [The context window is full](https://vshulcz.github.io/deja-vu/guide/context-window-full.html) — what compaction keeps, measured, and what to do instead
+- [Resuming yesterday's session](https://vshulcz.github.io/deja-vu/guide/resume-a-session.html) — find it across every agent, reopen it in the one that owns it
+- [The agent repeats a mistake you already fixed](https://vshulcz.github.io/deja-vu/guide/repeated-mistakes.html)
+- [Finding the session where you solved it](https://vshulcz.github.io/deja-vu/guide/find-a-session.html)
+- [Why agents forget between sessions](https://vshulcz.github.io/deja-vu/guide/forgetting.html) · [Where each agent keeps its history](https://vshulcz.github.io/deja-vu/guide/where-sessions-are-stored.html)
+- [What compaction drops](https://vshulcz.github.io/deja-vu/guide/after-compaction.html) · [Switching agents](https://vshulcz.github.io/deja-vu/guide/switching-agents.html) · [Auditing an agent](https://vshulcz.github.io/deja-vu/guide/auditing-agents.html) · [Exporting a conversation](https://vshulcz.github.io/deja-vu/guide/export-conversations.html) · [Across machines](https://vshulcz.github.io/deja-vu/guide/sync-across-machines.html) · [What memory costs](https://vshulcz.github.io/deja-vu/guide/token-cost.html)
+
+Per harness: [opencode](https://vshulcz.github.io/deja-vu/guide/memory-for-opencode.html) · [DeepSeek Harness](https://vshulcz.github.io/deja-vu/guide/memory-for-dsh.html) · [Kimi Code](https://vshulcz.github.io/deja-vu/guide/memory-for-kimi.html) · [Zed](https://vshulcz.github.io/deja-vu/guide/memory-for-zed.html) · [Grok Build](https://vshulcz.github.io/deja-vu/guide/memory-for-grok.html) · [Gemini CLI](https://vshulcz.github.io/deja-vu/guide/memory-for-gemini.html) · [Qwen Code](https://vshulcz.github.io/deja-vu/guide/memory-for-qwen.html) · [OpenClaw](https://vshulcz.github.io/deja-vu/guide/memory-for-openclaw.html) · [Goose](https://vshulcz.github.io/deja-vu/guide/memory-for-goose.html) · [Cline](https://vshulcz.github.io/deja-vu/guide/memory-for-cline.html) · [pi and omp](https://vshulcz.github.io/deja-vu/guide/memory-for-pi.html) · [Hermes](https://vshulcz.github.io/deja-vu/guide/memory-for-hermes.html)
+
+## Try it on your own history
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/vshulcz/deja-vu/main/install.sh | sh
+deja install --auto
+```
+
+Ten seconds to install, about ten to index. The next session your agent opens, it
+already knows what you solved in that project — including everything from before
+you installed this.
+
+## Contributing
+
+`make build test lint`, then [CONTRIBUTING.md](CONTRIBUTING.md). Adding a harness starts in
+the [parser registry](docs/ARCHITECTURE.md#source-parsers). Priorities and non-goals are in
+[ROADMAP.md](ROADMAP.md). Good first issues are labeled.
+
+## Support
+
+Bugs and questions go to [issues](https://github.com/vshulcz/deja-vu/issues).
+Anything you think is exploitable goes through the private advisory link in
+[SECURITY.md](SECURITY.md) instead. What deja reads, what it never sends
+anywhere, and how to exclude a project or forget a session is under
+[Privacy](#privacy).
+
+## License
+
+MIT © [Vladislav Shulcz](https://github.com/vshulcz)

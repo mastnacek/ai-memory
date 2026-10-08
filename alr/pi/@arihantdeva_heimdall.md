@@ -1,0 +1,442 @@
+# Heimdall
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/@arihantdeva/heimdall"><img alt="npm" src="https://img.shields.io/npm/v/%40arihantdeva%2Fheimdall"></a>
+  <a href="https://github.com/ArihantDeva/heimdall/actions/workflows/ci.yml"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/ArihantDeva/heimdall/ci.yml?branch=main"></a>
+  <a href="https://github.com/ArihantDeva/heimdall/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/ArihantDeva/heimdall?style=social"></a>
+  <img alt="license" src="https://img.shields.io/badge/license-MIT-blue">
+</p>
+
+**Your agent keeps rebuilding work you already did. Heimdall makes it stop.**
+
+<p align="center">
+  <a href="https://raw.githubusercontent.com/ArihantDeva/heimdall/main/docs/assets/demo.mp4"><img alt="Heimdall demo" src="https://raw.githubusercontent.com/ArihantDeva/heimdall/main/docs/assets/demo.png" width="720"></a>
+</p>
+
+Heimdall gives AI coding agents **persistent memory across every repository and project you work on** so the question *"did I already solve this in another project?"* gets answered by one verified search instead of twenty minutes of grep, `find`, and `ls` loops.
+
+## The problem it solves
+
+**1. Memory that doesn't live in one repository.** Every other memory tool is per-project. But your work isn't: the optimized functions you built in one project could be useful somewhere else. Heimdall indexes *everything you touch* into one semantic graph, so knowledge follows you across repositories, languages, and months.
+
+**2. Orientation time, cut to seconds.** A fresh agent session burns dozens of bash commands just figuring out the lay of the land — `ls`, `grep`, re-reading files it read last week. Heimdall injects the relevant prior work into the session's first prompt and backs a single `kb_search` call: ranked, scoped, verified. Fewer commands, fewer tokens, faster first useful action.
+
+**3. Zero token spend.** Memory maintenance is a local daemon: file watching, tree-sitter AST parsing, sqlite. Indexing a file costs **CPU only — never an LLM call**. Retrieval is hybrid ranked search (lexical + semantic + graph walk) over locally-computed embeddings. Your context window stays for your actual work. You can also use your GPU for up to 3.4x speeds.
+
+**4. Retrieval you can act on.** Semantic memory tools return plausible matches, but Heimdall also verifies it at runtime.
+
+- `STRONG` — the anchor is intact **and** the indexed text answers the query: the file is still a regular file whose size and mtime match its index card, and the query's tokens appear in the content that was indexed. Nothing is read at query time
+- `WEAK` — plausible but unverified; the printed reason says which part failed (changed since indexing, no index card, tokens covering too little of the indexed text, or a path that is no longer a regular file)
+- `REBUILT` — file moved; Heimdall found it and re-anchored automatically
+- `STALE` / `REMOVED` — dead path, logged and pruned so it stops ranking
+
+An agent acting on a dead path is worse than no answer. Ranked retrieval is trustworthy enough to act on. Gives the real picture, instead of the best guess.
+
+## How a session changes
+
+Without Heimdall:
+
+```
+$ grep -r "portfolio optimization" .            # wrong repo, 40s
+$ find ~/work -name "*.py" | xargs grep -l optimizer   # 2 min
+$ ls ~/work/... ; cat notes.md ; ...         # 15 commands later
+```
+
+With Heimdall:
+
+```
+$ kb_search "portfolio optimization jam optimizer"
+   1. [STRONG] portfolio optimizer — ~/work/quant-bot/src — EV-optimizer entry point
+   2. [STRONG] excel report builder — ~/work/reports/excel — 276-session tracking table
+```
+
+One call. Verified paths. Straight to work.
+
+## How it compares
+
+Architecture-level comparison of shipped defaults — not benchmark claims. "LLM extraction" etc. describe each project's default pipeline as documented; self-hosted or configured-differently deployments vary.
+
+| | **Heimdall** | mem0 | Zep (Graphiti) | Letta (MemGPT) | LangMem / LangChain Memory | Vector-DB RAG | Claude Memory | cAST / grep |
+|---|---|---|---|---|---|---|---|---|
+| Scope | **All your repos, one graph** | per-app/per-user memories | per-user/session graph | per-agent | per-app/thread | per-corpus/index | per-conversation/account | per-repo |
+| Runs on CPU only | **yes** | LLM+embeddings in the loop | LLM extraction for entities/edges | LLM-in-the-loop memory management | LLM extraction + embeddings | embeddings (GPU-friendly) | cloud | yes |
+| Token cost of indexing | **zero** (tree-sitter + local embeddings) | LLM extraction per memory op | LLM calls per episode | LLM calls throughout | LLM extraction per write | embedding tokens only | LLM summarization | zero but manual |
+| Trust verdicts on results | **STRONG / WEAK / REBUILT / STALE** | none | none | none | none | similarity score only | none | none |
+| Self-healing (moved files re-anchored) | **yes** | no | no | no | no | no (stale chunks rank) | no | no |
+| Convergent state (idempotent re-index) | **yes** (level-triggered reconciler) | append-oriented | event-sourced episodes | conversation-scoped | append-oriented | re-ingest to update | opaque | n/a |
+| Reads private source locally | **yes, never leaves disk** | sent to extraction LLM | sent to extraction LLM | stays local w/ local models | sent to extraction LLM | local if self-hosted | cloud | yes |
+| Harness integrations | pi, Claude Code, Codex, Cursor, Windsurf | SDK/API | SDK/API + Graphiti | SDK/API | LangChain-native | DIY per stack | Claude products | editor plugins |
+
+### Where Heimdall beats mem0 and common RAG
+
+By design, not by benchmark — these follow from the architecture:
+
+1. **Zero-LLM indexing instead of extraction pipelines.** mem0, Zep, Letta, and LangMem all use LLMs to write facts: every remembered fact costs extraction tokens, adds latency, and means your code/notes are processed by a cloud provider unless you wire your own. Heimdall's ingest is tree-sitter plus local CPU embeddings. It cannot leak data, nor does it cost anything.
+
+2. **Verified hits vs plausible hits.** RAG returns nearest neighbors with a similarity score; nothing checks that the chunk still exists, let alone that it answers the question. Heimdall re-verifies every result against the live filesystem at query time and labels it STRONG/WEAK/REBUILT/STALE. STRONG requires an index card that still agrees with the file on disk — its recorded size and mtime match what `stat` reports now, compared exactly (the value round-trips through SQLite unchanged, so there is no tolerance and no window) — and query coverage in the hit's own text, with the path excluded so a filename cannot stand in for content. The whole check is two stats per hit: it never opens, let alone reads, the file it judges. A hit with no card to check against is WEAK and says so; it does not get to claim verification it never performed. Agents can act on STRONG without a confirmation round-trip. One boundary is real and documented rather than claimed away: a same-size rewrite that also restores mtime is invisible to any stat, and closing that requires reading content — which is what `heimdall verify --deep` is for.
+
+3. **Self-healing vs stale corpora.** In vector-RAG, a moved file leaves orphaned chunks ranking forever until someone re-runs ingestion. Heimdall's level-triggered reconciler converges: moved files re-anchor automatically (REBUILT), deletions retract exactly their own nodes, and re-indexing twice is identical to once.
+
+4. **Cross-repo scope without a corpus pipeline.** Classic RAG needs you to define, chunk, and refresh a corpus per app. Heimdall watches working trees continuously — new repos join the graph on their own, and personal context (prompt logs, notes, now even email via `heimdall ingest-email`) lands in the same graph your code lives in.
+
+5. **What they win back.** Fair's fair: mem0/Zep/Letta excel at conversational fact curation across chat products, multi-user serving, and hosted APIs; LLM extraction summarizes messy prose better than regexes. Heimdall is making the opposite bet, that a single developer's machine-wide workspace where the unit of memory is verified file-level knowledge, not chat utterances. 
+
+Heimdall is the only one built for the real indie developer workflow: many repos, many months, one agent session at a time, on hardware you already own. Best for people with tons of side projects.
+
+## FAQ
+
+**Does my code leave my machine?** No. Indexing is tree-sitter parsing + local embeddings on CPU. Search runs against your local daemon. Nothing phones home.
+
+**Do I need a GPU?** No. The embedding model (bge-m3) runs on Apple Silicon / any modern CPU.
+
+**How is this different from grep?** Grep finds strings you already know exist. Heimdall answers "have I solved anything like this before?" across every project you've touched, ranked and verified against what's actually on disk right now.
+
+**What if a file moves or gets deleted?** The reconciler notices on its next pass. Moved files are re-homed automatically (REBUILT verdict); deletions retract exactly their own nodes. A stale path never ranks again.
+
+**Does it work with my agent?** One command wires it into pi, Claude Code, Codex, Cursor, or Windsurf. Anything that can run a CLI can use `search`/`insert` directly.
+
+**Is it production-ready?** It runs daily on this author's machine across ~12,800 live nodes with a 166-test suite guarding the concurrency invariants. v0.2.0. LongMemEval benchmark harness is in `bench/` (in progress).
+
+## Roadmap
+
+- [x] v0.1 — packaged CLI, five harness adapters, trust verdicts
+- [x] v0.2 — single-writer reconciler, depth-ladder indexing (symbols + call edges)
+- [ ] LongMemEval-S score ≥ 0.90 published from `bench/` (baseline S 0.740 reproduced)
+- [ ] LongMemEval-M full reader/judge run published (S subset is token-free recall only — not end-to-end)
+- [x] 0.9.0 — graft backend auto-builds on `npm i -g` (postinstall) and `heimdall setup`; no separate `init --backend` flag
+- [ ] Linux daemon packaging
+- [ ] MCP server mode
+
+## Contributing
+
+PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). The concurrency invariants are tested; break them and the suite goes red before you do.
+
+## Quickstart
+
+```bash
+npm i -g @arihantdeva/heimdall
+heimdall init --harness claude-code   # or pi | codex | cursor | opencode | all
+```
+
+That's it for install + harness wiring (`init`, `insert` work immediately).
+
+`npm i -g` auto-builds the graft backend during install when prerequisites
+are present
+(macOS — Xcode Command Line Tools + `brew install cmake pkg-config libyaml sqlite`;
+Debian/Ubuntu — `apt install cmake pkg-config build-essential git libsqlite3-dev libyaml-dev`;
+Fedora/Amazon Linux — `dnf install gcc gcc-c++ make cmake git pkgconf-pkg-config sqlite-devel libyaml-devel`;
+`git` required — llama.cpp is cloned at first build);
+first build takes a few minutes (log: `~/.heimdall/bootstrap.log`). If
+prerequisites are missing, SETUP NEEDED prints and the install still
+succeeds — run `heimdall setup` to build later. Opt out:
+`HEIMDALL_NO_BUILD=1 npm i -g @arihantdeva/heimdall`. Defaults: model
+`bge-m3`, accel auto (Metal on Apple Silicon, CUDA when `nvidia-smi`
+present, else CPU), threads = physical cores, 2 instances.
+
+`heimdall setup` also builds/installs `graftd` when none is working,
+downloads the model if needed, generates `~/.graft/config.yaml`, and
+installs the launchd daemon:
+
+```bash
+heimdall setup                         # detect + config + model + daemon
+heimdall setup --model bge-small-en-v1.5   # smaller model (~36MB, low RAM)
+heimdall setup --detect-only           # just print the hardware profile
+heimdall doctor                        # should print HEALTHY
+heimdall search "excel tracker portfolio optimization"
+```
+
+Full flags + hardware matrix + model catalog: [docs/setup.md](docs/setup.md).
+Prefer hand-rolling? Copy
+`config/heimdall.yaml.example` to `~/.graft/config.yaml` and edit
+(`/PATH/TO/` placeholders). On macOS the backend runs as the launchd job
+`com.graft.daemon` (setup writes the plist; template:
+`launchd/com.heimdall.backend.plist.example`).
+
+### Alternative backend: Mnemosyne
+
+Ranked search also supports [mnemosyne-oss](https://github.com/mnemosyne-oss/mnemosyne) (SQLite-backed agent memory) as the retrieval backend. Graft remains the zero-config default; select mnemosyne per-invocation or persistently:
+
+```bash
+pip install mnemosyne-memory            # or: uv pip install mnemosyne-memory
+HEIMDALL_BACKEND=mnemosyne heimdall search "preferences"        # one-off
+# persistent:
+python3 -c 'import json,pathlib; p=pathlib.Path.home()/".heimdall/config.json"; c=json.loads(p.read_text()) if p.exists() else {}; c["backend"]="mnemosyne"; p.write_text(json.dumps(c,indent=2))'
+heimdall search "preferences"
+```
+
+Resolution order: `$HEIMDALL_BACKEND` > `~/.heimdall/config.json` `backend` key > `graft`. Pin a non-PATH binary with `MNEMOSYNE=/path/to/mnemosyne`. Mnemosyne results flow through the same ranked/verified output as graft hits.
+
+## Demo
+
+![Heimdall demo](assets/demo.gif)
+
+Real session output (abridged):
+
+```
+$ kb_search "portfolio optimization jam optimizer"
+== retrieve (hybrid ranked): portfolio optimization jam optimizer
+   1. [STRONG] cov83%  portfolio optimizer — ~/work/quant-bot/src
+      EV-optimizer entry point, edited 2026-08-14
+   2. [WEAK]   excel report builder — ~/work/reports/excel
+```
+
+Every hit carries a trust verdict computed against the live filesystem — not a cached embedding score. Nothing is STRONG unless an index card says the file is unchanged (`~/.heimdall/global.db`: recorded size and mtime still match what `stat` reports, compared exactly — the value round-trips bit-for-bit through SQLite, so this is deterministic, not a tolerance), and either the query tokens overlap the hit's text or the semantic layer matched it on top of that verified identity. A similarity score alone never makes a hit STRONG. A hit that cannot meet the bar says which part failed, on its own line: `file changed since it was indexed`, `no index card for this path — content not verified`, `indexed content intact, but query tokens cover only 20% of it`, `anchor is gone from disk`, `path is no longer a regular file`. The ceiling is honest and specific: a same-size rewrite that also restores mtime leaves metadata *byte-identical* while content differs, so no stat-based check can see it — and the card's `sha1` cannot close it for free, because it hashes `read_preview(path)`, i.e. content that must be read. That boundary is owned by `heimdall verify --deep`, which re-hashes the file and reports the drift, so the exposure lasts until that audit runs.
+
+## Design history
+
+v0.1.0 hooks inferred graph mutations by regex-parsing bash commands and writing the graph from every hook process. It collapsed: writes it didn't recognize were invisible, concurrent hook processes raced delete+insert, and a misparse wrote wrong data as fact. v0.2.0 replaced all of it with a **single-writer, level-triggered reconciler**: nothing ever tells the graph *what* changed, only *that a path might have*. The reconciler reads the file from disk and makes the graph match.
+
+The trust verdict layer came from the same lesson one level up: even a perfect graph lies if its anchors rot (directories get reorganized aggressively). So search results are re-verified against the filesystem at query time, with self-healing (rehome) for moved files.
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=ArihantDeva/heimdall&type=Date)](https://star-history.com/#ArihantDeva/heimdall&Date)
+
+If Heimdall saved you a rebuild, a star helps other agents' humans find it.
+
+
+## Architecture / how it works
+
+```
+                 ┌─────────────────────────── harness integrations ───────────────────────────┐
+                 │  Pi: extensions/kb-*.ts          Claude Code: PostToolUse hook             │
+                 │  (kb-tools, kb-autosync, kb-orient, kb-search-guard)   Codex/Cursor/Windsurf │
+                 └───────────────┬──────────────────────────────┬─────────────────────────────┘
+                                 │ only ever appends hints      │
+                                 ▼                              ▼
+                     ~/.heimdall/hints.jsonl        heimdall CLI (bin/heimdall.js)
+                                 │                     init / insert / hint / verify / depth
+                                 ▼                                    │
+   ┌───────────────────────── THE SINGLE WRITER (holds O_EXCL lock) ───┘
+   │  bin/heimdall-reconciler.mjs  (daemon: fs watch + hint ingest + drain loop + audit timer)
+   │        │ drain()  reads hint queue → reconcilePath() per path
+   │        ▼
+   │  bin/lib/reconcile.mjs  — level-triggered convergence
+   │        reads file from disk → desiredState() → compares hash/depth
+   │        → sink projection (graft insert/delete) BEFORE journal commit
+   │        → journal.commit() in one transaction, generation-guarded (ABA)
+   │        ▼
+   │  bin/lib/journal.mjs  — AUTHORITATIVE index (~/.heimdall/journal.db, node:sqlite, WAL)
+   │        paths (hash/size/mtime/depth/generation/state) · owned_nodes · owned_edges
+   │        pending_edges (order-independent cross-file edges) · queue (dedup)
+   │        ▼
+   └──────────►  bin/lib/sink.mjs  — projection target (pluggable backend)
+                 GraftSink (graft CLI) | MemorySink (tests, --dry-run)
+                 ▼
+        ~/.graft daemon (vendor/graft, built from source) — sqlite + bge-m3 embeddings + graph edges
+
+   SEARCH PATH (read side, no lock):
+   kb-search.sh → graft ask per repo (per-repo code graphs, --json) + embed-index.py query (global semantic)
+                → merged, deduped → verdict pass in-process (STRONG / WEAK / NOPATH)
+                → optional graft explore (graph walk of related work) → printed, ranked
+```
+
+**Core invariants** (each has a test):
+
+- **Level-triggered, not event-driven.** Hooks/watchers/scripts can only say "look at this path". They are never believed about *what* happened. A missed, duplicated, or flatly wrong hint costs one `stat` — nothing more. This is what makes 40 concurrent agents editing one file harmless: they produce N cheap appends that collapse to one queue row (primary-key dedup).
+- **Single writer by construction.** Every graph/journal mutation passes through `Lock` — an `O_EXCL` create with stale-PID liveness reclamation (Node has no portable flock). Two writers cannot exist, so the old delete-then-insert race (file briefly vanished from the graph) is unrepresentable. The daemon holds the lock for its lifetime; one-shot `heimdall reconcile` takes it too and serializes against the daemon.
+- **Exact ownership.** Every node and edge belongs to exactly one path. A commit deletes and re-inserts all of that path's rows in one transaction — a deleted symbol cannot survive as a ghost, and one path's retraction never touches another's rows.
+- **Content hash is the oracle.** Desired state = pure function of (bytes, depth). Reconciling twice is byte-identical to reconciling once. The `generation` counter is the ABA guard: a commit whose generation moved since the reconcile started is rejected (action `stale`) and the path re-queued, so a late reconcile can never resurrect a node a newer one deleted.
+- **Order independence.** A cross-file edge to a not-yet-indexed symbol parks as a pending edge, owned by the source file, and resolves in both directions once the target file reconciles. The final graph does not depend on which file was reconciled first.
+- **Audit as backstop.** `heimdall verify` compares the journal against the filesystem (stat-only: size/mtime, plus a depth-upgrade check) and exits 1 on drift; `--deep` re-hashes everything and catches even a same-size/same-mtime rewrite. This is the accuracy claim as a CI-able command. The daemon runs the same audit on a timer (default 15 min) and re-queues drift.
+- **Journal before sink, sink before commit.** Sink writes happen BEFORE the journal commit: a crash in between leaves the path dirty, so it is redone — safe because reconcile is idempotent. The reverse order could mark a path clean that was never projected, which is the one failure the audit cannot detect later.
+- **The honest guarantee is bounded-staleness convergence**, not instantaneous correctness: between an edit and the next reconcile pass the graph is behind. It is never *wrong* in a way that survives a pass.
+
+## Depth levels
+
+Nodes are indexed at a depth. The default and the recommendation is **maximum** — the graph knows not just that a file exists but which functions and classes live in it, at which lines, and what calls what.
+
+| Depth | Node knows |
+|---|---|
+| `path` (L0) | the file exists |
+| `file` (L1) | + language, size, description |
+| `symbol` (L2) | + one node per top-level definition, with `file:line` and signature |
+| `graph` (L3) | + imports / calls / inherits / uses edges, intra- and cross-file |
+
+`max` resolves to whatever the machine can actually do: L2/L3 need tree-sitter, so a box without it degrades to L1 rather than failing — and the next audit automatically re-indexes at the deeper level once tree-sitter appears (a depth upgrade shows up as drift). Asking for a depth above the machine's capability is honored as far as possible and reported as `clamped`:
+
+```bash
+heimdall depth src/server.ts         # requested vs effective depth for one path
+```
+
+Extraction is tree-sitter AST parsing via a Python bridge, **not an LLM call**: depth costs CPU, never tokens. The bridge (`bin/lib/heimdall_extract.py`) deliberately calls graphify's per-language extractors directly rather than `graphify.extract()`, because the latter writes a `graphify-out/cache/` directory next to the files it reads (Heimdall indexes the whole home tree) and adds a second cache with its own invalidation rules that could disagree with reality.
+
+## Components (map)
+
+| Component | File | Job |
+|---|---|---|
+| **CLI** | `bin/heimdall.js` + `bin/lib/cli-main.mjs` | `init` / `search` / `insert` / `doctor` / `daemon` / `reconcile` / `verify` / `depth` / `hint` — thin wrappers over the bin/ scripts, never a rewrite |
+| **Reconciler daemon** | `bin/heimdall-reconciler.mjs` | the single writer: recursive fs watch + hint ingest + drain loop + audit timer, holds the lock for its lifetime |
+| **Reconcile** | `bin/lib/reconcile.mjs` | level-triggered convergence: read disk, make graph match; `audit()` = drift detector |
+| **Journal** | `bin/lib/journal.mjs` | authoritative index: ownership, hashes, generations, dedup queue, pending edges |
+| **Extraction** | `bin/lib/extract.mjs` + `bin/lib/heimdall_extract.py` | desired state per file: hash + L0-L3 nodes/edges, path-namespaced node ids |
+| **Depth ladder** | `bin/lib/depth.mjs` | levels, capability probe, per-root overrides, config |
+| **Single-writer lock** | `bin/lib/lock.mjs` | `O_EXCL` lock every graph mutation passes through |
+| **Hints** | `bin/lib/hints.mjs` | the one channel a non-writer may use (append-only, atomic, torn-line tolerant) |
+| **Sink** | `bin/lib/sink.mjs` | projection targets: `GraftSink` (CLI) and `MemorySink` (tests/dry-run) |
+| **Ranked search** | `bin/kb-search.sh` | top-k hybrid (per-repo `graft ask` + global semantic) merged + verdict pass in-process, `--scope` filter |
+| **Trust verification** | `bin/kb-search.sh` verdict pass | both backends compute verdicts in-process: STRONG requires card-to-file identity (size + mtime vs `~/.heimdall/global.db`) plus query coverage in the hit's text; two stats per hit, no file reads |
+| **Stale pruning** | `bin/kb-stale-scan.py`, `bin/kb-rehome.sh` | full-graph sweep: deterministic rehome or log+delete |
+| **Health & telemetry** | `bin/kb-health.sh`, `bin/telemetry.sh` | daemon health, index freshness, usage stats (kb_* calls/24h, hit rate, est. time saved) |
+| **Bootstrap** | `bin/sync-edits.sh`, `bin/seed-graft.sh` | replay session edit logs → hints; seed inventory TSV into Graft |
+| **Full rebuild** | `bin/kb-rebuild.sh` | backup → wipe → parallel restore → re-seed → prune → verify |
+| **Pi extension: tools** | `extensions/kb-tools.ts` | exposes `kb_search` / `kb_insert` / `kb_sync` as agent tools |
+| **Pi extension: autosync** | `extensions/kb-autosync.ts` | hook that appends path hints — never writes the graph |
+| **Pi extension: orient** | `extensions/kb-orient.ts` | injects prior-work hits into the first user prompt of a session (2.5s cap, silent degrade) |
+| **Pi extension: guard** | `extensions/kb-search-guard.ts` + `extensions/lib/kb-guard-core.mjs` | warns after 3 consecutive grep-style actions without kb_search; agent can self-suspend via the `kb_guard_pause` tool for 1–20 turns (enforcement resumes clean-slate on expiry) |
+| **Email ingestion** | `bin/lib/ingest-email.mjs` | mailbox → graft-style cards (read-only via cli-email `list`/`show`), idempotent; retrieval rides the semantic layer |
+| **Backends** | `vendor/graft/` (Apache 2.0), `vendor/graphify/` (MIT) | Graft = semantic-memory daemon; graphify = code-graph extractors |
+
+**Backends are pluggable.** Any store speaking the graft CLI contract works; Graft is the vendored reference. See `docs/heimdall_compare.dot/png` for the graphify vs Graft vs Heimdall positioning (graphify answers *codebase* questions, Graft persists *notes/facts* across projects, Heimdall ties them together with trust verdicts and self-healing).
+
+## Fact layer (experimental)
+
+The `heimdall insert` fact cards and the runtime extractor (`bin/lib/facts.mjs`) are **experimental**:
+
+- English-pattern extraction only — non-English utterances yield zero facts (deliberate ceiling, marked in source).
+- Extracted facts can contradict each other; no contradiction resolution yet.
+- The prompt-capture adapter named in the design spec is not part of the published package.
+- Secret filtering and per-source ownership are solid; the *interpretation* layer is what's young.
+
+Treat fact output as leads to verify, not verified memory. The reconciled code-graph layer carries the trust guarantees.
+
+## Harness integration
+
+One command wires the **full enforcement stack** into any supported harness: memory rules in the agent's instruction file, an MCP server (`kb_search` / `kb_insert` / `kb_sync`), and a guard hook that warns when the agent falls back to `ls`/`grep`/`find` chains instead of searching memory:
+
+```bash
+heimdall init --harness claude-code   # or codex, cursor, pi, opencode, gemini-cli, deepseek
+heimdall init --detect                # list harnesses found on this machine
+heimdall mcp                          # raw stdio MCP server (for anything else)
+HEIMDALL_NO_AUTOINIT=1 npm i -g @arihantdeva/heimdall   # skip auto-setup
+```
+
+`npm i -g` runs a best-effort postinstall that auto-wires every detected harness (never fails the install; opt out with `HEIMDALL_NO_AUTOINIT=1`).
+
+### Pi native package
+
+Heimdall is also a **pi native package** — install it through pi itself and the four
+extensions (`kb_search` / `kb_insert` / `kb_sync` tools, kb-orient, kb-autosync,
+kb-search-guard) load directly from the package, no file copying:
+
+```bash
+pi install npm:@arihantdeva/heimdall        # or: pi install git:github.com/ArihantDeva/heimdall
+```
+
+`heimdall init --harness pi` stays for global-install wiring; it detects a
+package-managed install and wires only the rules block (no duplicate extensions).
+
+| Harness | Command | Rules file | MCP | Guard hook |
+|---|---|---|---|---|
+| **Claude Code** | `init --harness claude-code` | `~/.claude/CLAUDE.md` | ✅ `settings.json` | ✅ PostToolUse hook |
+| **Codex CLI** | `init --harness codex` | `~/AGENTS.md` | ✅ `config.toml` | rules only |
+| **Cursor** | `init --harness cursor` | `.cursor/rules/heimdall.mdc` | ✅ `mcp.json` | rules only |
+| **Pi** | `init --harness pi` | `~/.pi/agent/AGENTS.md` | native tools | ✅ kb-search-guard extension |
+| **OpenCode** | `init --harness opencode` | AGENTS.md plugin dir | ✅ `opencode.json` | ✅ plugin hook |
+| **Gemini CLI** | `init --harness gemini-cli` | `~/.gemini/GEMINI.md` | ✅ `settings.json` | rules only |
+| **DeepSeek** *(experimental)* | `init --harness deepseek` | `~/.deepseek/AGENTS.md` | ✅ `settings.json` | ✅ PostToolUse hook |
+| Anything else | `heimdall mcp` | your rules | ✅ stdio server | — |
+
+Every adapter merges into existing config files (never clobbers your keys), is idempotent on re-run, and embeds the same canonical rule block — no per-harness rule drift. The DeepSeek adapter is experimental: DeepSeek's published harness config format may differ; verify paths after running init.
+
+## Usage
+
+```bash
+heimdall search "excel tracker portfolio optimization"   # ranked + verified knowledge search
+heimdall insert --title "portfolio optimizer" \
+  --body "~/work/quant-bot/src — EV-optimizer entry point" \
+  --keywords portfolio,optimize                              # record reusable work
+heimdall init --harness claude-code                      # wire into your harness (idempotent)
+heimdall doctor                                          # daemon + index health
+```
+
+Self-healing surface:
+
+```bash
+heimdall daemon              # the single writer: watch, reconcile, audit on a timer
+heimdall reconcile           # converge now (one-shot; takes the same lock)
+heimdall reconcile --all     # deep audit + repair everything
+heimdall verify --deep       # read-only drift report; exit 1 if any. CI-safe
+heimdall hint PATH ...       # mark paths dirty — no lock needed, any process
+heimdall hint --stdin        # harness hooks hand tool-call JSON on stdin
+```
+
+### Email ingestion (CPU-only, read-only)
+
+Index your own mailbox into the knowledge base. Reads mail exclusively
+through the local [cli-email](https://github.com/) binary's read-only
+subcommands (`list`, `show` — never send/mark/move); renders one markdown
+card per message; retrieval rides the existing semantic layer (CPU bge-m3,
+no GPU, no cloud calls).
+
+```bash
+heimdall ingest-email --accounts a1,a2 --limit 50   # cards → ~/Repos/email-archive/graft/mail/<account>/<uid>.md
+~/.heimdall/venv/bin/python3 bin/embed-index.py build   # embed new cards (CPU-only)
+heimdall search "subject or sender words"           # emails now rank like any other knowledge
+```
+
+Re-runs are idempotent (byte-compare per card — unchanged mail is not
+rewritten). Point `--root` at any directory under `~/Repos` to change where
+the card tree lives.
+
+## Testing
+
+```bash
+npm test            # full suite (365 tests)
+npm run typecheck   # extensions typecheck
+```
+
+Suites:
+- `tests/reconcile.test.mjs` — the point. Invariant tests: 40 racing writers converge to one node set; separate OS processes hinting one file collapse to one queue row; reconciling twice is byte-identical; ABA generation guard rejects stale commits; deletion retracts exactly its own nodes; cross-file edges converge regardless of reconcile order; depth clamping; parse-failure degrades to L1; audit catches behind-our-back edits incl. same-size-same-mtime rewrites (`--deep`); git checkout picked up (the old command-regex path could not see it); lock admits exactly one writer + stale-PID reclamation; node-id path namespacing; garbage hints dropped. The L3 end-to-end test self-skips without tree-sitter.
+- `tests/guard.test.mjs` — kb-search-guard contract (warn on 3rd consecutive grep action, reset on kb_search/kb_sync/graft, interleaved reads do NOT reset; agent-callable `suspend(N)`/`tickTurn()` pause: silences all enforcement for N model turns, clamped 1–20, expiry restores clean-slate).
+- `tests/init.test.mjs` + `tests/adapters.test.mjs` — CLI contract and per-harness config-writer smoke tests against temp HOMEs.
+- `tests/kb-verify.test.mjs` — content-aware verdict contract via `selftest:` node ids (no graft daemon needed): content mismatch downgrades STRONG, content match upgrades to STRONG, binary files degrade gracefully, `extract_paths` home-anchor regression (the tilde-form bug).
+- `tests/kb-search-identity.test.mjs` — the STRONG contract end to end: a card that agrees with the file is STRONG, a card whose size no longer matches is WEAK, and a `sys.addaudithook` "open" trace proves the verdict pass never opens the files it judges (a `stat` is not an open, so a regression to content-reading verification shows up here).
+- `tests/adapters-mcp-entry.test.mjs` — launches the command+args the adapters actually write into each harness config (codex TOML, `mcp.json`, `opencode.json`) and requires a JSON-RPC `initialize` reply, so a generated config can never again ship an entry point that prints usage and exits.
+- `tests/npm-pack-contents.test.mjs` — packs the working tree and asserts `vendor/graphify/` is in the tarball, then runs one real L2 extraction from the unpacked artifact (not a source checkout) and checks `capability()` refuses to claim graph depth without the bridge.
+
+The concurrency tests are the point: if the single-writer or idempotency properties ever break, those are the tests that go red.
+
+## Requirements
+
+- Node ≥ 22.5 (the journal uses the built-in `node:sqlite`), `bash`, `python3`
+- macOS today (launchd daemon management); Linux works with a manual daemon
+- tree-sitter-capable python for L2/L3 (`HEIMDALL_PYTHON` env, or `~/.heimdall/venv/bin/python3`, or `python3` in PATH). The probe extracts a real file and requires symbols back, so this reports what the bridge can actually do rather than what imports. Note it is per-python, not per-language: only the grammars you install produce symbol depth, and a language without its binding settles at file depth.
+- Runtime npm deps: **zero** — `typebox`/`typescript`/`@types/node` are dev-only
+- Graft backend for `search`/`doctor` (built from `vendor/graft/`)
+
+## Operations
+
+```bash
+bash bin/kb-health.sh                 # heimdall doctor — daemon up, index fresh
+bash bin/sync-edits.sh                # one-shot: replay session edit logs → hints → reconcile
+bash bin/telemetry.sh view            # last snapshots: nodes/day, sync age, kb_* calls, hit rate
+python3 bin/kb-stale-scan.py          # full-graph stale sweep (rehome or log+delete)
+bash bin/kb-rebuild.sh                # last-resort full rebuild (backup → wipe → restore)
+```
+
+## Status
+
+v0.2.0 — adds the reconciler: a single-writer, level-triggered convergence loop with a content-hash oracle, exact per-path ownership, and a depth ladder that indexes symbols and call edges by line. Published on npm as [`@arihantdeva/heimdall`](https://www.npmjs.com/package/@arihantdeva/heimdall).
+
+## License
+
+MIT. Independent project — not affiliated with Graft or its authors.
+
+### Attribution
+
+- **[Graft](https://github.com/NanoNets/Graft)** (Apache 2.0) — vendored as the default semantic-memory backend (`vendor/graft/`, source + build instructions, not prebuilt).
+- **[graphify](https://github.com/safishamsi/graphify)** v0.3.17 (MIT, © Safi Shamsi) — vendored per-repo code-graph extraction (`vendor/graphify/`), the tree-sitter bridge's extraction engine.
+
+## Runtime state
+
+- `~/.heimdall/` — journal, lock, hint queue, `config.json` (harness selection), adapter install records.
+- `~/.graft/` — backend config (`config.yaml`), sqlite profile DB, `graftd.log`, `.last-sync` (sync-edits watermark).
+
+These are data, not build artifacts — never `rm`/`mv` over them blindly.
+
+## Development notes / gotchas
+
+- **The bridge must not use `graphify.extract()`** — it writes a cache dir next to indexed files and adds a second invalidation source.
+- **The L3 test self-skips without tree-sitter** — a green suite can silently mean "L1-only machine"; check `heimdall depth <file>` output for the effective level.
+

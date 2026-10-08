@@ -1,0 +1,10 @@
+[package]
+name = "uma-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+uma-core = { path = "../uma-core" }
+clap.workspace = true
+anyhow.workspace = true

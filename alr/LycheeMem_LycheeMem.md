@@ -1,0 +1,901 @@
+<div align="center">
+  <img src="assets/logo.png" alt="LycheeMem Logo" width="200">
+  <h1>LycheeMemory: Lightweight Long-Term Memory for LLM Agents</h1>
+  <p>
+    <img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License">
+    <img src="https://img.shields.io/badge/python-3.9+-blue.svg" alt="Python Version">
+    <img src="https://img.shields.io/badge/LangGraph-000?style=flat&logo=langchain" alt="LangGraph">
+    <img src="https://img.shields.io/badge/litellm-000?style=flat&logo=python" alt="litellm">
+    <a href="https://lancedb.com/">
+      <img src="https://img.shields.io/badge/LanceDB-vector%20database-0ea5e9?style=flat" alt="LanceDB">
+    </a>
+    <a href="https://lycheemem.github.io/">
+      <img src="https://img.shields.io/badge/Homepage-lycheemem.github.io-2ea44f?style=flat&logo=github&logoColor=white" alt="Homepage">
+    </a>
+    <a href="https://pypi.org/project/lycheemem/">
+      <img src="https://img.shields.io/pypi/v/lycheemem?style=flat&logo=pypi&logoColor=white&label=PyPI&color=3775A9" alt="PyPI">
+    </a>
+  </p>
+  <p>
+    <a href="README_zh.md">中文</a> | English
+  </p>
+  <p>
+    <strong>Works across agent runtimes that support plugins, MCP, or Python integration.</strong>
+  </p>
+  <table>
+    <tr>
+      <td align="center" width="150">
+        <a href="openclaw-plugin/INSTALL_OPENCLAW.md">
+          <img src="https://img.shields.io/badge/OpenClaw-native%20plugin-FF6B35?style=flat-square" alt="OpenClaw Plugin">
+          <br>
+          <strong>OpenClaw</strong>
+        </a>
+        <br>
+        <sub>Native plugin</sub>
+      </td>
+      <td align="center" width="150">
+        <a href="claude-plugin/lycheemem/INSTALL_CLAUDE.md">
+          <img src="https://img.shields.io/badge/Claude%20Code-plugin-111827?style=flat-square" alt="Claude Code Plugin">
+          <br>
+          <strong>Claude Code</strong>
+        </a>
+        <br>
+        <sub>MCP + hooks</sub>
+      </td>
+      <td align="center" width="150">
+        <a href="hermes-plugin/lycheemem/INSTALL_HERMES.md">
+          <img src="https://img.shields.io/badge/Hermes-plugin-2563EB?style=flat-square" alt="Hermes Plugin">
+          <br>
+          <strong>Hermes</strong>
+        </a>
+        <br>
+        <sub>Runtime plugin</sub>
+      </td>
+      <td align="center" width="150">
+        <a href="https://pypi.org/project/lycheemem/">
+          <img src="https://img.shields.io/badge/PyPI-package-3775A9?style=flat-square&logo=pypi&logoColor=white" alt="PyPI Package">
+          <br>
+          <strong>PyPI Package</strong>
+        </a>
+        <br>
+        <sub>Python API</sub>
+      </td>
+      <td align="center" width="150">
+        <a href="#mcp">
+          <img src="https://img.shields.io/badge/MCP-compatible-10B981?style=flat-square" alt="MCP Compatible">
+          <br>
+          <strong>Any MCP Client</strong>
+        </a>
+        <br>
+        <sub>HTTP MCP server</sub>
+      </td>
+    </tr>
+  </table>
+</div>
+
+
+LycheeMemory is a compact memory framework for LLM agents. It starts from efficient conversational memory—through structured organization, lightweight consolidation, and adaptive retrieval—and gradually extends toward action-aware, usage-aware memory for more capable agentic systems.
+
+---
+
+<div align="center">
+  <a href="#news">News</a>
+  •
+  <a href="#related-projects">Related Projects</a>
+  •
+  <a href="#quick-start">Quick Start</a>
+  •
+  <a href="#web-demo">Web Demo</a>
+  •
+  <a href="#openclaw-plugin">OpenClaw Plugin</a>
+  •
+  <a href="#mcp">MCP</a>
+  •
+  <a href="#memory-architecture">Memory Architecture</a>
+  •
+  <a href="#pipeline">Pipeline</a>
+  •
+  <a href="#api-reference">API Reference</a>
+</div>
+
+---
+
+<a id="news"></a>
+
+## 🔥 News
+- **[07/07/2026]** OpenAI-compatible Chat Completions endpoints are now available, with request-level consolidation control via `consolidate` or `store`.
+- **[05/08/2026]** Transformer memory reranker v0 improves evidence selection in semantic memory search, with positive hit@10 gains on LoCoMo and zero-shot LongMemEval-S / MSC-MemFuse / HotpotQA fixtures. See [Transformer Reranker v0](docs/transformer_reranker_v0.md).
+- **[04/29/2026]** Hermes and Claude Code plugin integrations are now available, bringing LycheeMemory's automatic recall, turn mirroring, and consolidation workflow to more agent runtimes. Setup guides: [Hermes](hermes-plugin/lycheemem/INSTALL_HERMES.md) · [Claude Code](claude-plugin/lycheemem/INSTALL_CLAUDE.md)
+- **[04/26/2026]** Visual (Multimodal) Memory module added! See [Visual Memory](#visual-memory).
+- **[04/13/2026]** LycheeMem is now LycheeMemory.
+- **[04/03/2026]** The project now supports installation via `pip install lycheemem`. You can easily start the service from anywhere using `lycheemem-cli`!
+- **[03/30/2026]** We evaluated LycheeMemory on PinchBench with the OpenClaw plugin: compared to OpenClaw's native memory, it achieved an ~6% score improvement, while reducing token consumption by ~71% and cost by ~55%!
+- **[03/28/2026]** Semantic memory has been upgraded to Compact Semantic Memory (SQLite + LanceDB), no Neo4j required. See [/quick-start](#quick-start) for details.
+- **[03/27/2026]** **OpenClaw** Plugin is now available at [/openclaw-plugin](#openclaw-plugin) ! [Setup guide →](openclaw-plugin/INSTALL_OPENCLAW.md)
+- **[03/26/2026]** MCP support is available at [/mcp](#mcp) !
+- **[03/23/2026]** LycheeMemory is now open source: [GitHub Repository →](https://github.com/LycheeMem/LycheeMem)
+
+---
+
+<a id="related-projects"></a>
+
+## 🔗 Related Projects 
+
+LycheeMemory is part of the **3rd-generation Lychee (立知) large model series**, which focuses on memory intelligence, continual learning, and long-context reasoning.
+
+We welcome you to explore our related works:
+
+- **LycheeMemory (ACL 2026, CCF-A)**: a unified framework for implicit long-term memory and explicit working memory collaboration in large language models  
+  [![arXiv](https://img.shields.io/badge/arXiv-2602.08382-B31B1B?logo=arxiv&logoColor=fff)](https://arxiv.org/abs/2602.08382) [![GitHub](https://img.shields.io/badge/GitHub-LycheeMemory-181717?logo=github&logoColor=fff)](https://github.com/owoakuma/LycheeMemory) [![Hugging Face](https://img.shields.io/badge/Hugging%20Face-LycheeMemory--7B-FFD21E?logo=huggingface)](https://huggingface.co/lerverson/LycheeMemory-7B)
+
+- **LycheeMem (this project)**: long-term memory infrastructure for LLM-based agents  
+  [![Project Page](https://img.shields.io/badge/Project_Page-LycheeMem-blue?logo=google-chrome&logoColor=fff)](https://lycheemem.github.io) [![GitHub](https://img.shields.io/badge/GitHub-LycheeMem-181717?logo=github&logoColor=fff)](https://github.com/LycheeMem/LycheeMem)
+
+- **LycheeDecode (ICLR 2026, CCF-A)**: selective recall from massive KV-cache context memory  
+  [![Project Page](https://img.shields.io/badge/Project_Page-lycheedecode-blue?logo=google-chrome&logoColor=fff)](https://lg9077.github.io/lycheedecode) [![arXiv](https://img.shields.io/badge/arXiv-2602.04541-B31B1B?logo=arxiv&logoColor=fff)](https://arxiv.org/abs/2602.04541) [![GitHub](https://img.shields.io/badge/GitHub-LycheeDecode-181717?logo=github&logoColor=fff)](https://github.com/HITsz-TMG/TMGNLP/tree/main/LycheeDecode)
+
+- **LycheeCluster (ACL 2026, CCF-A)**: structured organization and hierarchical indexing for context memory  
+  [![arXiv](https://img.shields.io/badge/arXiv-2603.08453-B31B1B?logo=arxiv&logoColor=fff)](https://arxiv.org/abs/2603.08453)
+
+---
+
+<a id="quick-start"></a>
+
+## ⚡ Quick Start
+
+### Prerequisites
+
+- Python 3.9+
+- An LLM API key (OpenAI, Gemini, or any litellm-compatible provider)
+
+### Installation
+
+Install the core package:
+
+```bash
+pip install lycheemem
+```
+
+Recommended install with the default transformer memory reranker:
+
+```bash
+pip install "lycheemem[rerank]"
+```
+
+The `rerank` extra adds PyTorch / Transformers runtime dependencies. With it
+installed, LycheeMemory enables the hosted `LycheeMem/reranker` checkpoint by
+default. Without the extra, the core memory system still works and reranking
+falls back safely.
+
+Once installed, you can start the backend server instantly using the CLI:
+
+```bash
+lycheemem-cli
+```
+
+For development or if you prefer to run from source:
+
+```bash
+git clone https://github.com/LycheeMem/LycheeMem.git
+cd LycheeMem
+pip install -e .
+```
+
+### Configuration
+
+Create a `.env` file in your working directory and fill in your values. The full template in `.env.example` also includes session/user DB paths, JWT settings, and working-memory thresholds; the snippet below shows the most important ones:
+
+```dotenv
+# LLM — litellm format: provider/model
+LLM_MODEL=openai/gpt-4o-mini
+LLM_API_KEY=sk-...
+LLM_API_BASE=                     # optional
+
+# Embedder
+EMBEDDING_MODEL=openai/text-embedding-3-small
+EMBEDDING_DIM=1536
+EMBEDDING_API_KEY=                # optional
+EMBEDDING_API_BASE=               # optional
+
+```
+
+> **Supported LLM providers** (via [litellm](https://github.com/BerriAI/litellm)):
+> `openai/gpt-4o-mini` · `gemini/gemini-2.0-flash` · `ollama_chat/qwen2.5` · any OpenAI-compatible endpoint
+
+### Transformer Reranker
+
+LycheeMemory includes a transformer reranker for semantic memory search. It can
+improve evidence selection when the correct memory is already in the wider
+candidate pool.
+
+For the smoothest experience, install LycheeMemory with the rerank extra:
+
+```bash
+pip install "lycheemem[rerank]"
+```
+
+After that, no extra model command is required. The reranker is enabled by
+default and loads the current v0 checkpoint from Hugging Face on first use:
+
+```env
+EXPERIMENTAL_TRANSFORMER_RERANK=true
+TRANSFORMER_RERANK_MODEL_PATH=LycheeMem/reranker
+```
+
+To disable it explicitly:
+
+```env
+EXPERIMENTAL_TRANSFORMER_RERANK=false
+```
+
+If you prefer to pin the model to a local directory, download it once and point
+the same variable at that path:
+
+```bash
+mkdir -p ~/.cache/lycheemem/models
+huggingface-cli download LycheeMem/reranker \
+  --local-dir ~/.cache/lycheemem/models/reranker-v0
+export TRANSFORMER_RERANK_MODEL_PATH=~/.cache/lycheemem/models/reranker-v0
+```
+
+The base install still works without PyTorch or Transformers. If rerank
+dependencies or the checkpoint are unavailable, LycheeMemory logs a warning,
+disables reranking for that process, and continues with baseline memory search.
+See [Transformer Reranker v0](docs/transformer_reranker_v0.md) for metrics,
+limitations, and diagnostics.
+
+### Start the Server
+
+If you installed via pip, you can start the LycheeMemory background service from anywhere using:
+
+```bash
+lycheemem-cli
+```
+
+*(If running from source, you can also use `python main.py` to start the server.)*
+
+The API is served at `http://localhost:8000`. Interactive docs at `/docs`.
+
+> `main.py` currently starts Uvicorn without enabling live reload. For development reload, run Uvicorn directly, for example:
+>
+> ```bash
+> uvicorn src.api.server:create_app --factory --reload
+> ```
+
+---
+
+<a id="web-demo"></a>
+
+## 🎨 Web Demo
+
+A frontend demo is included under `web-demo/`. It provides a chat interface alongside live views of the **semantic memory tree**, skill library, and working memory state.
+
+```bash
+cd web-demo
+npm install
+npm run dev      # served at http://localhost:5173
+```
+
+> Make sure the backend is running on port 8000 (or update proxy settings in `web-demo/vite.config.ts`) before starting the frontend.
+
+---
+
+<a id="openclaw-plugin"></a>
+
+## 🦞 OpenClaw Plugin
+
+LycheeMemory ships a native [OpenClaw](https://openclaw.ai) plugin that gives any OpenClaw session persistent long-term memory with zero manual wiring.
+
+**What the plugin provides:**
+
+- `lychee_memory_smart_search` — default long-term memory retrieval entry point
+- **Automatic turn mirroring** via hooks — the model does **not** need to call `append_turn` manually
+  - User messages are appended automatically
+  - Assistant messages are appended automatically
+- `/new`, `/reset`, `/stop`, and `session_end` automatically trigger boundary consolidation
+- Proactive consolidation on strong long-term knowledge signals
+
+**Under normal operation:**
+- The model only calls `lychee_memory_smart_search` when recalling long-term context
+- The model may call `lychee_memory_consolidate` manually when an immediate persist is warranted
+- The model does **not** need to call `lychee_memory_append_turn` at all
+
+### Quick Install
+
+```bash
+openclaw plugins install "/path/to/LycheeMem/openclaw-plugin"
+openclaw gateway restart
+```
+
+See the full setup guide: [openclaw-plugin/INSTALL_OPENCLAW.md](openclaw-plugin/INSTALL_OPENCLAW.md)
+
+---
+
+<a id="mcp"></a>
+
+## 🔧 MCP
+
+LycheeMemory also exposes an HTTP MCP endpoint at `http://localhost:8000/mcp`.
+
+- Available tools: `lychee_memory_smart_search`, `lychee_memory_search`, `lychee_memory_append_turn`, `lychee_memory_consolidate`
+- `lychee_memory_consolidate` works for sessions that already contain mirrored turns from `/chat`, `/memory/reason`, or `lychee_memory_append_turn`
+
+### MCP Transport
+
+- `POST /mcp` handles JSON-RPC requests
+- `GET /mcp` exposes the SSE stream used by some MCP clients
+- The server returns `Mcp-Session-Id` during `initialize`; reuse that header on later requests
+
+### Client Configuration
+
+For any MCP client that supports remote HTTP servers, configure the MCP URL as:
+
+```text
+http://localhost:8000/mcp
+```
+
+Generic config example:
+
+```json
+{
+  "mcpServers": {
+    "lycheemem": {
+      "url": "http://localhost:8000/mcp"
+    }
+  }
+}
+```
+
+### Manual JSON-RPC Flow
+
+1. Call `initialize`
+2. Reuse the returned `Mcp-Session-Id`
+3. Send `initialized`
+4. Call `tools/list`
+5. Call `tools/call`
+
+Initialize example:
+
+```bash
+curl -i -X POST http://localhost:8000/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize",
+    "params": {
+      "protocolVersion": "2025-03-26",
+      "capabilities": {},
+      "clientInfo": {
+        "name": "debug-client",
+        "version": "0.1.0"
+      }
+    }
+  }'
+```
+
+Tool call example:
+
+```bash
+curl -X POST http://localhost:8000/mcp \
+  -H "Content-Type: application/json" \
+  -H "Mcp-Session-Id: <session-id>" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/call",
+    "params": {
+      "name": "lychee_memory_smart_search",
+      "arguments": {
+        "query": "what tools do I use for database backups",
+        "top_k": 5,
+        "mode": "compact",
+        "include_graph": true,
+        "include_skills": true
+      }
+    }
+  }'
+```
+
+### Recommended MCP Usage Pattern
+
+1. Use `/chat` or `/memory/reason` with a stable `session_id` to write conversation turns, or mirror external host turns with `lychee_memory_append_turn`.
+2. Use `lychee_memory_smart_search` in `compact` mode for the default one-shot recall path.
+3. Use `lychee_memory_search` only when you explicitly want raw retrieval results for debugging or custom host-side processing.
+4. After the conversation ends, call `lychee_memory_consolidate` with the same `session_id`.
+
+---
+
+<a id="memory-architecture"></a>
+
+## 📚 Memory Architecture
+
+LycheeMemory organizes memory into three complementary stores:
+
+<table>
+  <thead>
+    <tr>
+      <th>Working Memory</th>
+      <th>Semantic Memory</th>
+      <th>Procedural Memory</th>
+      <th>Visual Memory</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>
+        <p>(Episodic)</p>
+        <ul>
+          <li>Session turns</li>
+          <li>Summaries</li>
+          <li>Token budget management</li>
+        </ul>
+      </td>
+      <td>
+        <p>(Typed Action Store)</p>
+        <ul>
+          <li>7 MemoryRecord types</li>
+          <li>Conflict-aware Record Fusion</li>
+          <li>Hierarchical memory tree</li>
+          <li>Action-aware hierarchical retrieval</li>
+          <li>Usage feedback loop + RL-ready statistics</li>
+        </ul>
+      </td>
+      <td>
+        <p>(Skills)</p>
+        <ul>
+          <li>Skill entries</li>
+          <li>HyDE retrieval</li>
+        </ul>
+      </td>
+      <td>
+        <p>(Multimodal)</p>
+        <ul>
+          <li>VLM-driven image understanding</li>
+          <li>Dual embedding (caption + CLIP visual)</li>
+          <li>Text ↔ image cross-modal retrieval</li>
+          <li>Ebbinghaus forgetting curve</li>
+          <li>Three-layer storage (SQLite + LanceDB + filesystem)</li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+### 💾 Working Memory
+
+The working memory window holds the active conversation context for a session. It operates under a **dual-threshold token budget**:
+
+- **Warn threshold (70%)** — triggers asynchronous background pre-compression; the current request is not blocked.
+- **Block threshold (90%)** — the pipeline pauses and flushes older turns to a compressed summary before proceeding.
+
+Compression produces *summary anchors* (past context, distilled) + *raw recent turns* (last N turns, verbatim). Both are passed downstream as the conversation history.
+
+### 🗺️ Semantic Memory
+
+Semantic memory is organised around **typed MemoryRecords plus action-grounded retrieval state**. The storage layer is SQLite (FTS5 full-text search) + LanceDB (vector index), while retrieval is conditioned on recent context, tentative action, constraints, and missing slots.
+
+#### Memory Record Types
+
+Each memory entry is stored as a `MemoryRecord`. The `memory_type` field distinguishes seven semantic categories:
+
+| Type | Description |
+|------|-------------|
+| `fact` | Objective facts about the user, environment, or world |
+| `preference` | User preferences (style, habits, likes/dislikes) |
+| `event` | Specific events that have occurred |
+| `constraint` | Conditions that must be respected |
+| `procedure` | Reusable step-by-step procedures / methods |
+| `failure_pattern` | Previously failed action paths and their causes |
+| `tool_affordance` | Capabilities and applicable scenarios of tools/APIs |
+
+Beyond text, every `MemoryRecord` carries **action-facing metadata** (`tool_tags`, `constraint_tags`, `failure_tags`, `affordance_tags`) and **usage statistics** (`retrieval_count`, `action_success_count`, etc.) to seed future reinforcement-learning signals. Retrieval logs also persist `retrieval_plan`, `action_state`, response excerpts, and later user feedback so the system can close a lightweight action-outcome loop without training.
+
+Related `MemoryRecord`s can be fused online by the **Record Fusion Engine** into denser `CompositeRecord`s. Composite entries persist direct `child_composite_ids`, so long-term semantic memory is organised as a **hierarchical memory tree** instead of a flat bag of summaries.
+
+#### Four-Module Pipeline
+
+##### Module 1: Compact Semantic Encoding
+
+A single-pass pipeline that converts conversation turns into a list of `MemoryRecord`s:
+
+1. **Typed extraction** — LLM extracts self-contained facts and assigns a semantic category to each record.
+2. **Decontextualization** — Pronouns and context-dependent phrases are expanded into full expressions, so each record is understandable without the original dialogue.
+3. **Action metadata annotation** — LLM annotates each record with `memory_type`, `tool_tags`, `constraint_tags`, `failure_tags`, `affordance_tags`, and other structured labels.
+
+`record_id = SHA256(normalized_text)` — naturally idempotent; duplicate content is deduplicated automatically.
+
+##### Module 2: Record Fusion, Conflict Update, and Hierarchical Consolidation
+
+Triggered online after each consolidation. No LLM calls — pure embedding cosine similarity math:
+
+1. **Deduplication** — For each new record, ANN search finds existing records of the same `memory_type` with cosine similarity > 0.85. Near-duplicates are soft-expired; composites covering affected source records are invalidated.
+2. **Clustering** — ANN search builds a similarity graph (cosine > 0.75) over surviving records. Union-Find finds connected components; each component containing at least one new record becomes a candidate cluster.
+3. **Composite construction** — The representative record (highest confidence / most recent) provides `semantic_text`; entities, tags, and temporal fields are merged from all cluster members. A new `CompositeRecord` is written to SQLite + LanceDB.
+4. **Hierarchy rounds** — The same clustering pass runs over CompositeRecords, producing `composite → composite` abstractions and persisting `child_composite_ids` so the memory tree can keep growing upward.
+
+##### Module 3: Action-Aware Hierarchical Retrieval
+
+Retrieval is organised around the hierarchical memory tree, using CompositeRecords as the primary retrieval unit. The current query, recent context, and ActionState jointly condition holistic relevance judgement at the composite level; matched composites are expanded down the memory tree to atomic MemoryRecords on demand; and a reflection loop driven by adequacy assessment covers any residual information gaps.
+
+**Composite-Level Relevance Judgement**
+
+Retrieval first operates at the CompositeRecord level. An ANN vector search pre-filters to the top-20 semantically nearest CompositeRecords, then a single LLM call performs holistic relevance judgement over those candidates: each composite is either selected as relevant or excluded; among those selected, the LLM additionally flags entries whose summary is too abstract to fully answer the query and therefore warrant expansion to their underlying atomic records. The ANN pre-filter keeps the LLM judgement bounded to one call regardless of how many CompositeRecords exist in the database.
+
+**Memory Tree Expansion**
+
+For composites flagged as requiring expansion, the retrieval engine recursively traverses `source_record_ids` and `child_composite_ids` down the memory tree to retrieve the corresponding atomic `MemoryRecord`s. This preserves the broad semantic overview provided by high-level composites while enabling precise access to fine-grained evidence when the query demands it, balancing retrieval efficiency with detail coverage.
+
+**Reflection-Based Supplementary Recall**
+
+After the initial candidate set is formed, the engine assesses the adequacy of the current context. When a coverage gap is detected, multi-channel supplementary recall is activated: FTS full-text and vector channels (both `semantic_text` and `normalized_text` paths) extend coverage at the `MemoryRecord` level, and a direct vector recall over the episode turns index recovers dialogue content not yet distilled into `MemoryRecord`s. The reflection loop runs for a bounded number of rounds, continuing only while information gaps remain.
+
+##### Module 4: Candidate Aggregation and Context Enrichment
+
+After all phases complete, candidates are aggregated and ranked by source tier for top-k selection: composites selected by the composite-level relevance judgement receive the highest priority, followed by atomic MemoryRecords from tree expansion, with supplementary recall results ranked last. All candidates are then enriched with **episodic context** — original dialogue excerpts from the session store are retrieved and appended to each candidate's display text, providing the downstream SynthesizerAgent with fully sourced, contextualised background.
+
+### 🛠️ Procedural Memory — Skill Store
+
+The skill store preserves reusable *how-to* knowledge as structured skill entries, each carrying:
+
+- **Intent** — a short description of what the skill does.
+- **`doc_markdown`** — a full Markdown document describing the procedure, commands, parameters, and caveats.
+- **Embedding** — a dense vector of the intent text, used for similarity search.
+- **Metadata** — usage counters, last-used timestamp, preconditions.
+
+Skill retrieval uses **HyDE (Hypothetical Document Embeddings)**: the query is first expanded into a *hypothetical ideal answer* by the LLM, then that draft text is embedded to produce a query vector that matches well against stored procedure descriptions, even when the user's original phrasing is vague.
+
+---
+
+<a id="visual-memory"></a>
+
+### 🖼️ Visual Memory
+
+Visual Memory stores image-grounded knowledge through a three-layer architecture: SQLite (metadata + FTS5), LanceDB (dual vector index), and local filesystem (raw image files, organised by session).
+
+#### VisualMemoryRecord
+
+Each record corresponds to one VLM-understood image:
+
+| Field | Description |
+|---|---|
+| `record_id` | `SHA256(image_hash + session_id + timestamp)` |
+| `caption` | Natural-language description generated by VLM (primary retrieval anchor) |
+| `scene_type` | `screenshot / chart / photo / document / ui / code / other` |
+| `caption_embedding` | Text embedding of the caption (backward-compatible) |
+| `visual_embedding` | CLIP visual embedding (enables cross-modal retrieval) |
+| `importance_score` | 0.0–1.0, governs forgetting rate |
+| `image_hash` | Content hash for deduplication |
+
+#### Components
+
+**VisualExtractor / VisualExtractorFast**  
+Calls a VLM (e.g. `qwen-vl-max`) to understand each image and produce structured `caption`, `entities`, `scene_type`, and `importance_score`. The `Fast` variant compresses images to 512 px at JPEG quality 75, cuts the timeout to 15 s, and uses a 30-token ultra-fast prompt. Both variants cache results by `image_hash` (LRU, 128 / 256 entries) to avoid re-processing identical images.
+
+**MultimodalEmbedder / MultimodalEmbedderFast**  
+Maps both text and images to the same vector space via a CLIP-style model (`clip-vit-base-patch32` by default, 512-dim).
+
+
+**VisualRetriever**  
+Three retrieval paths:
+- **Text → Visual**: dual-channel (caption vector + CLIP visual vector) with score fusion
+- **Image → Similar images**: CLIP visual embedding ANN search
+- **Session-level**: returns visual memories for a given session
+
+**VisualForgetter**  
+Ebbinghaus-inspired forgetting curve:
+
+$$\text{decay} = 0.5^{\,t \;/\; t_{1/2}^{\text{eff}}}$$
+
+Effective half-life $t_{1/2}^{\text{eff}}$ scales from 7 days (`importance = 0`) to ~30 days (`importance = 1.0`). Each retrieval event adds up to +30% decay resistance. Records with `decay < 0.1` are soft-expired; maximum TTL is 90 days.
+
+---
+
+<a id="pipeline"></a>
+
+## ⚙️ Pipeline
+
+Every request passes through a fixed sequence of five agents. Four are synchronous stages in the LangGraph pipeline; one is a background post-processing task.
+
+<div align="center">
+  <div>
+    <div>START</div>
+    <div>▼</div>
+    <div>
+      <div>
+        <div>
+          <strong>1. WMManager</strong> — Token budget check + compress/render
+        </div>
+        <div>↓</div>
+        <div>
+          <strong>2. SearchCoordinator</strong> — Planner → Semantic + Skill retrieval
+        </div>
+        <div>↓</div>
+        <div>
+          <strong>3. SynthesizerAgent</strong> — LLM-as-Judge scoring + context fusion
+        </div>
+        <div>↓</div>
+        <div>
+          <strong>4. ReasoningAgent</strong> — Final response generation
+        </div>
+      </div>
+    </div>
+    <div>▼</div>
+    <div>END</div>
+    <div>
+      <span>Background</span>
+      <span>asyncio.create_task( <strong>ConsolidatorAgent</strong> )</span>
+    </div>
+  </div>
+</div>
+
+### Stage 1 — WMManager
+
+Rule-based agent (no LLM prompt). Appends the user turn to the session log, counts tokens, and fires compression if either threshold is crossed. Produces `compressed_history` and `raw_recent_turns` for downstream stages.
+
+### Stage 2 — SearchCoordinator
+
+`SearchCoordinator` first builds `recent_context` from compressed summaries and raw recent turns, then derives an `ActionState` from the current query, constraints, recent failure signals, token budget, and recent tool use. Before retrieval, it calls the LLM with `RETRIEVAL_PLANNING_SYSTEM` to produce a structured `SearchPlan` (mode, semantic queries, tool hints, required constraints, tree traversal depth, etc.) conditioned on the query and ActionState. Semantic memory retrieval then proceeds through the Action-Aware hierarchical retrieval pipeline: an ANN pre-filter narrows to the top-20 nearest CompositeRecords, a single LLM call judges their relevance and flags entries requiring tree expansion, the memory tree is recursively traversed to surface the corresponding atomic MemoryRecords, and an adequacy assessment determines whether supplementary FTS, vector, and raw episode turn recall is needed to close any remaining coverage gaps. This stage returns raw semantic fragments, skill hits, and retrieval provenance; it does **not** build the final `background_context` yet. Skill retrieval is mode-aware (`answer` / `action` / `mixed`) and uses HyDE against the skill store only when it is likely to help.
+
+When a new user turn arrives, `SearchCoordinator` also tries to apply lightweight feedback to the most recent unresolved action/mixed retrieval log, so the next turn can mark the prior memory usage as success / fail / correction.
+
+### Stage 3 — SynthesizerAgent
+
+Acts as an **LLM-as-Judge**: scores every retrieved memory fragment on an absolute 0-1 relevance scale, discards fragments below the threshold (default 0.6), and fuses the survivors into a single dense `background_context` string. It also identifies `skill_reuse_plan` entries that can directly guide the final response. This stage is where the final answer-time context is built; it outputs `provenance` — a citation list containing scoring breakdown and source references for each kept memory item.
+
+### Stage 4 — ReasoningAgent
+
+Receives `compressed_history`, `background_context`, and `skill_reuse_plan` and generates the final assistant reply. It appends the assistant turn back to the session store, and the pipeline finalizes the semantic usage log with a response excerpt so the next user turn can provide outcome feedback.
+
+### Background — ConsolidatorAgent
+
+Triggered immediately after `ReasoningAgent` completes, runs in a thread pool and **does not block the response**. It:
+
+1. **Compact consolidation** — calls `CompactSemanticEngine.ingest_conversation()`, which runs a single-pass encoder (typed extraction → decontextualization → action metadata annotation), writes `MemoryRecord`s to SQLite + LanceDB, then triggers the embedding-based Record Fusion engine (zero LLM calls: cosine similarity dedup → cluster → build CompositeRecord from representative record → hierarchy rounds).
+2. **Skill extraction** — identifies successful tool-usage patterns in the conversation and adds skill entries to the skill store.
+
+---
+
+<a id="api-reference"></a>
+
+## 🔌 API Reference
+
+### OpenAI-Compatible Chat API
+
+LycheeMemory exposes an OpenAI Chat Completions compatible endpoint. Point the
+OpenAI SDK `base_url` to `http://localhost:8000/v1` and call
+`client.chat.completions.create(...)`.
+
+Canonical endpoint:
+
+- `POST /v1/chat/completions`
+
+Compatibility aliases:
+
+- `POST /v1/chat/complete` — non-streaming alias
+- `POST /v1/chat` — accepts the same request body and supports `stream=true`
+
+Non-streaming request:
+
+```json
+{
+  "model": "lycheemem",
+  "messages": [
+    { "role": "user", "content": "What do I usually use for database backups?" }
+  ],
+  "session_id": "my-session"
+}
+```
+
+Streaming request:
+
+```json
+{
+  "model": "lycheemem",
+  "messages": [
+    { "role": "user", "content": "What do I usually use for database backups?" }
+  ],
+  "session_id": "my-session",
+  "stream": true,
+  "stream_options": { "include_usage": true }
+}
+```
+
+Python SDK example:
+
+```python
+from openai import OpenAI
+
+client = OpenAI(base_url="http://localhost:8000/v1", api_key="lycheemem")
+
+response = client.chat.completions.create(
+    model="lycheemem",
+    messages=[
+        {"role": "user", "content": "What do I usually use for database backups?"}
+    ],
+    extra_body={
+        "session_id": "my-session",
+        "consolidate": False,
+    },
+)
+print(response.choices[0].message.content)
+```
+
+Consolidation control:
+
+- By default, a completed chat turn is appended to the session and background
+  consolidation is triggered.
+- Set `"consolidate": false` to disable automatic consolidation for this
+  request.
+- Set `"store": false` for OpenAI-style storage control; LycheeMemory maps it
+  to the same auto-consolidation switch.
+- If both are provided, `consolidate` takes precedence.
+
+---
+
+### `POST /memory/search` — Unified Memory Retrieval
+
+Query both the semantic memory channel and the skill store in a single call. New integrations should prefer `semantic_results`; `graph_results` is kept as a backward-compatible alias.
+
+```json
+// Request
+{
+  "query": "what tools do I use for database backups",
+  "top_k": 5,
+  "include_graph": true,
+  "include_skills": true
+}
+
+// Response
+{
+  "query": "...",
+  "graph_results": [
+    {
+      "anchor": {
+        "node_id": "compact_context",
+        "name": "CompactSemanticMemory",
+        "label": "SemanticContext",
+        "score": 1.0
+      },
+      "constructed_context": "...",
+      "provenance": [ { "record_id": "...", "source": "record", "semantic_source_type": "record", "score": 0.91, ... } ]
+    }
+  ],
+  "semantic_results": [
+    {
+      "anchor": { "node_id": "compact_context", "name": "CompactSemanticMemory", "label": "SemanticContext", "score": 1.0 },
+      "constructed_context": "...",
+      "provenance": [ { "record_id": "...", "source": "record", "semantic_source_type": "record", "score": 0.91, ... } ]
+    }
+  ],
+  "skill_results": [ { "id": "...", "intent": "pg_dump backup to S3", "score": 0.87, ... } ],
+  "total": 6
+}
+```
+
+---
+
+### `POST /memory/smart-search` — One-Shot Recall
+
+Runs search and, optionally, synthesis in one API call. `mode=compact` is the default integration path when you want a concise `background_context` without handling intermediate payloads yourself.
+
+```json
+// Request
+{
+  "query": "what tools do I use for database backups",
+  "top_k": 5,
+  "synthesize": true,
+  "mode": "compact"
+}
+
+// Response
+{
+  "query": "...",
+  "mode": "compact",
+  "synthesized": true,
+  "background_context": "User regularly uses pg_dump with a cron job...",
+  "skill_reuse_plan": [ { "skill_id": "...", "intent": "...", "doc_markdown": "..." } ],
+  "provenance": [ { "record_id": "...", "source": "record", "score": 0.91, ... } ],
+  "kept_count": 4,
+  "dropped_count": 2,
+  "total": 6
+}
+```
+
+---
+
+### `POST /memory/reason` — Grounded Reasoning
+
+Runs the ReasoningAgent given a prepared `background_context`, commonly produced by `/memory/smart-search`.
+
+```json
+// Request
+{
+  "session_id": "my-session",
+  "user_query": "what tools do I use for database backups",
+  "background_context": "User regularly uses pg_dump...",
+  "skill_reuse_plan": [...],
+  "append_to_session": true   // write result to session history (default: true)
+}
+
+// Response
+{
+  "response": "You typically use pg_dump scheduled via cron...",
+  "session_id": "my-session",
+  "wm_token_usage": 3412
+}
+```
+
+---
+
+### `POST /memory/append-turn` — Mirror External Host Turns
+
+Appends one user or assistant turn into LycheeMemory's session store so it can be consolidated later.
+
+```json
+// Request
+{
+  "session_id": "my-session",
+  "role": "user",
+  "content": "I usually back up PostgreSQL with pg_dump to S3."
+}
+
+// Response
+{
+  "status": "appended",
+  "session_id": "my-session",
+  "turn_count": 3
+}
+```
+
+---
+
+### `POST /memory/consolidate` — Trigger Consolidation
+
+Manually trigger memory consolidation for a session. This is the primary consolidation endpoint and supports both background and synchronous modes.
+
+```json
+// Request
+{
+  "session_id": "my-session",
+  "background": true
+}
+
+// Response (background mode)
+{
+  "status": "started",
+  "entities_added": 0,
+  "skills_added": 0,
+  "facts_added": 0
+}
+```
+
+Legacy compatibility endpoint: `POST /memory/consolidate/{session_id}`.
+
+---
+
+### `GET /memory/graph` — Semantic Memory Tree
+
+Returns the current semantic memory as a hierarchy. `mode=cleaned` (default) emits `tree_roots` plus direct tree edges for the frontend memory-tree view; `mode=debug` exposes the lower-level flattened relations for inspection.
+
+---
+
+### `GET /pipeline/status` and `GET /pipeline/last-consolidation`
+
+Use these endpoints for operational checks and background consolidation polling:
+
+- `GET /pipeline/status` returns aggregate counts for sessions, semantic memory, and skills.
+- `GET /pipeline/last-consolidation?session_id=<id>` returns the latest consolidation result for a session, or `pending` if the background task has not finished yet.
+
+### Usage Examples
+
+```bash
+# Basic single-turn demo (automatically registers 'demo_user')
+python examples/api_pipeline_demo.py
+
+# Multi-turn chat demo (3 consecutive turns, followed by consolidation)
+python examples/api_pipeline_demo.py --multi-turn
+
+# Use a fixed session_id (useful for accumulating history across multiple runs)
+python examples/api_pipeline_demo.py --session-id my-test-session
+```
