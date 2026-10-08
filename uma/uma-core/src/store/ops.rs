@@ -42,6 +42,9 @@ impl Store {
     }
 
     /// Writes a revision chained to `old_id` **within this store**.
+    ///
+    /// Revision history is dated by each fact's `generated.at` (see the
+    /// timeline); the claim's `since` passes through untouched.
     fn store_revision(&self, old_id: &FactId, mut new_fact: Fact) -> Result<Fact> {
         new_fact.supersedes = Some(*old_id);
         // The claim's origin (`since`) is the caller's decision: a revision
