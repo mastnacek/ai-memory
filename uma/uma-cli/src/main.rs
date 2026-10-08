@@ -52,6 +52,9 @@ enum Commands {
 
     /// Read-only health report on the store and its index cache
     Doctor(slices::doctor::DoctorArgs),
+
+    /// Carry memory between machines with git (the global store)
+    Sync(slices::sync::SyncArgs),
 }
 
 fn main() -> Result<()> {
@@ -70,5 +73,6 @@ fn main() -> Result<()> {
         Commands::Timeline(args) => slices::timeline::run(args),
         Commands::Export(args) => slices::export::run(args),
         Commands::Doctor(args) => slices::doctor::run(args),
+        Commands::Sync(args) => slices::sync::run(args),
     }
 }

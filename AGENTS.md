@@ -92,7 +92,8 @@ ai-memory/
                 ├── mcp/        # S7: stdio JSON-RPC; read-only unless --allow-writes
                 ├── timeline/   # S8: supersession history view
                 ├── export/     # S8: OKF bundle / JSON export
-                └── doctor/     # S8: read-only health report
+                ├── doctor/     # S8: read-only health report
+                └── sync/       # S8: git-backed sync of the global store
                 # every slice folder = mod.rs (+ helpers) + README.md
 ```
 
@@ -112,7 +113,7 @@ When implementing new capabilities, add them as **new vertical feature slices**:
 | **S5** | Consolidation Proposer | `slices/consolidate/` (Read-only merge/deduplication + contradiction proposals) (Completed) |
 | **S6** | Procedural Skill Memory | `slices/skill/` (Template storage + expansion; **never executes**) (Completed) |
 | **S7** | Universal MCP Server | `slices/mcp/` (hand-rolled JSON-RPC stdio; **read-only unless `--allow-writes`**) (Completed) |
-| **S8** | Polish + Sync & Transport | `slices/{timeline,export,doctor}/` (Completed); `slices/sync/` (Git/rsync bundle sync) |
+| **S8** | Polish + Sync & Transport | `slices/{timeline,export,doctor,sync}/` (Completed — git-based, global store only) |
 
 ---
 

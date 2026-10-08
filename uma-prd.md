@@ -28,7 +28,7 @@ Each slice = **one user-visible capability** + its data, tools, storage, tests. 
 | **S5** | Consolidation proposer (agent-reviewed) | Merge dupes, fix contradictions | S4 (Completed) |
 | **S6** | Skill memory (procedural) | Reusable how-to with invocation template | S4 (Completed) |
 | **S7** | MCP server (stdio) | Claude Code, Cursor, OpenCode read/write same store | S1, S2 (Completed) |
-| **S8** | Polish commands + cross-machine sync | Portable memory | S0 (polish Completed; sync pending Q4) |
+| **S8** | Polish commands + cross-machine sync | Portable memory | S0 (Completed) |
 
 **Vertical-slice rule**: Each slice ships a working `uma` CLI command + Pi tool(s) + tests. No "infrastructure slice".
 
@@ -70,13 +70,12 @@ Capabilities that were not in the roadmap but are implemented, tested and in use
 | `search.rs` split into a folder | It was 394 lines, six below the 400 hard limit — the next search change would have been refused. Now `search/{mod,keyword,semantic,fusion,outcome}.rs`, all under the soft target. |
 | `stale_after` is now settable and visible | It was parsed, stored and honoured by `is_active_at`, but **no CLI slice could set it** — an unreachable field, i.e. a lie in the data model. Now: `uma write/supersede --stale-after` (bare dates accepted), a `[STALE]` badge distinct from `[DEPRECATED]`, and a `doctor` staleness check that names the remedy. Verified end-to-end, including MCP inheritance. |
 
-**Current tally**: 91 Rust tests (45 CLI + 42 core + 4 integration) and 7 TypeScript tests, 0 warnings in both debug and release builds.
+**Current tally**: 104 Rust tests (58 CLI + 42 core + 4 integration) and 7 TypeScript tests, 0 warnings in both debug and release builds.
 
 ### Outstanding work (as of 2026-10-08)
 
 | Item | Slice | Blocked by |
 | :--- | :--- | :--- |
-| `uma sync push/pull` (the polish commands are done) | S8 | Question 4 (git vs rsync) |
 | Import from prior memory systems (§9) | **unlisted** | **Speculative.** Checked 2026-10-08: none of the four source stores exist on this machine (`~/.pi/agent/memory`, `.memsearch/memory`, `~/.engram/vault`, `~/.pi/agent/pi-hermes-memory`), and their formats would have to be reverse-engineered. Revisit only when a real migration is actually needed. |
 | Local embedding fallback | S9 | Question 2 |
 | Auto-recall / context injection | S3 | On hold by operator preference (deliberate) |
@@ -236,13 +235,16 @@ A mutation attempted without `--allow-writes` is refused server-side, not merely
 - [x] Add to a client: `claude mcp add uma -- uma mcp serve`
 - [ ] **Test**: write from Claude Code, read in Pi, search in Cursor — requires an external MCP client, so manual
 
-### **Week 9: S8 — Polish & Sync** (polish ✅ · sync pending)
+### **Week 9: S8 — Polish & Sync** ✅
 
 - [x] `uma timeline [--id <ULID>] [--all] [--json]` — reconstructs supersession chains oldest-first, newest chain on top. Read-only, always loads deprecated facts (they *are* the history), cycle-safe
 - [x] `uma export [--json | --okf --out <dir>]` — portable JSON, or an OKF v0.2 bundle: one standalone Markdown document per fact at `<dir>/<type>/<id>.md` plus `MANIFEST.json`
 - [x] `uma doctor [--json] [--strict]` — read-only health report: roots, file counts, index coverage, schema version, embeddings, orphan embeddings, stale rows. Every non-ok finding names its remedy
 - [x] Pi: `/uma timeline`, `/uma export --out <dir>`, `/uma doctor`, with argument completions
-- [ ] Git sync: `uma sync push/pull` — **needs question 4 answered**
+- [x] `uma sync push | pull | status` — git-based (question 4 resolved). The repository lives at the **global** store root, so the committed content is exactly the Markdown facts; a `.gitignore` written on every push keeps `index.db` (a rebuildable machine-specific cache that changes on every search) out of the repository, and a repo that already tracks it is healed automatically
+- [x] Conflicts are the operator's job: a merge that conflicts stops, reports the unmerged files and any leftover `<<<<<<<`/`>>>>>>>` markers, and never picks a side — a conflict inside YAML frontmatter makes a fact unparsable, and the index would then skip it silently
+- [x] Verified against a real bare remote in tests (two simulated machines): publish → clone → edit → pull → merge, plus the divergent-conflict case where the local version must survive untouched
+- [x] **Global store only, deliberately:** project memory lives inside the project's own repository and travels with it when `.uma/` is tracked; sync must never push an operator's work branch
 - [ ] Benchmarks and a migration guide from pi-memory / memorix
 
 **Note**: `doctor` paid for itself immediately. On its first run against this repository it reported *38 indexed rows but 26 files on disk* and *12 stale rows* — leftover pollution from test stores written before the canonicality gate existed. Applying its suggested `uma search "" --reindex` took it to 9/9 ok.
@@ -396,7 +398,7 @@ Imports preserve `created_at`, map types, create supersession chains for conflic
 1. ~~**OpenRouter embedding model**~~ — **Resolved**: `qwen/qwen3-embedding-8b`.
 2. **Fallback**: if OpenRouter unavailable, allow local fallback (e.g., `candle` + `bge-m3` ONNX)? *Open — still the only hard external dependency in the read path.*
 3. ~~**Skill invocation**~~ — **Resolved**: expansion only. `uma_skill_invoke` returns command *text*; it never executes. Running it is the agent's call through its own shell tool, so the harness's command approval still applies. UMA does not become a code-execution surface reachable through a memory API.
-4. **Sync**: git-based (commits = fact changes) or custom rsync protocol? *Open — blocks S8.*
+4. ~~**Sync**~~ — **Resolved**: git-based. Facts are already OKF Markdown, so git supplies history, diffs and visible conflicts for free; rsync was rejected because the merge policy for prose conflicts is the hard part git already implements.
 5. **Pi panel**: TUI (like pi-blackhole) or simple text status? *Open — cosmetic, blocks nothing.*
 6. ~~**Model for consolidation proposer**~~ — **Resolved**: none. S5 is deterministic lexical analysis (tokenize → light stem → Jaccard), so it needs no model at all and is fully testable offline.
 7. ~~**MCP write policy**~~ — **Resolved**: read-only by default; `--allow-writes` is the explicit launch-time operator opt-in. Without it the server cannot mutate memory, and an attempted mutation is refused in-band rather than silently permitted.

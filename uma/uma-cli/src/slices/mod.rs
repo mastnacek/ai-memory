@@ -8,5 +8,6 @@ pub mod read;
 pub mod search;
 pub mod skill;
 pub mod supersede;
+pub mod sync;
 pub mod timeline;
 pub mod write;
