@@ -79,6 +79,7 @@ Capabilities that were not in the roadmap but are implemented, tested and in use
 | Import from prior memory systems (§9) | **unlisted** | **Speculative.** Checked 2026-10-08: none of the four source stores exist on this machine (`~/.pi/agent/memory`, `.memsearch/memory`, `~/.engram/vault`, `~/.pi/agent/pi-hermes-memory`), and their formats would have to be reverse-engineered. Revisit only when a real migration is actually needed. |
 | Local embedding fallback | S9 | Question 2 |
 | Auto-recall / context injection | S3 | On hold by operator preference (deliberate) |
+| Consolidator is blind across scopes | S5 | Found by dogfooding: `consolidate` analyses one scope per run, so near-duplicates spanning project/global (e.g. the three-fact VSA cluster) are invisible to it. Not a contradiction, so nothing to fix urgently; a `--scope all` cross-scope mode is the obvious future extension. |
 | Pi panel / `/uma status` | S9 | Question 5 (cosmetic, blocks nothing) |
 | `supersede` integration test | — | ✅ Done: `Store::supersede_within` |
 | Manual Pi test on 2+ models | — | Needs an interactive session |

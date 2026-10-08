@@ -75,6 +75,7 @@ the predecessor is retired with `status: deprecated` and the new revision chains
    - **Consequences**: what to do and what to avoid.
 4. **One-line `description`**: a short summary used for previews and search snippets.
 5. **Relevant Tags**: lowercase ASCII keywords (`tags: ["vsa", "architecture", "rust"]`).
+6. **Describe invariants, not volatile state**: a fact that embeds a count, a file list, or "currently N tests" is stale the moment the code changes. State the rule that stays true ("it is unit-tested directly"), not the number that was true when written.
 
 ---
 
