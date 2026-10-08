@@ -2,7 +2,8 @@ use crate::domain::{Fact, FactId, FactStatus, FactType, Scope};
 use crate::embeddings::EmbeddingClient;
 use crate::indexer::Indexer;
 use crate::search::{
-    search_hybrid, search_keyword, search_semantic, SearchHit, SearchMode, SearchOptions,
+    search_hybrid_resilient, search_keyword, search_semantic, SearchMode, SearchOptions,
+    SearchOutcome,
 };
 use crate::serialization::{fact_to_markdown, markdown_to_fact};
 use anyhow::{Context, Result};
@@ -223,7 +224,7 @@ impl Store {
         include_deprecated: bool,
         as_of: Option<DateTime<Utc>>,
         limit: usize,
-    ) -> Result<Vec<SearchHit>> {
+    ) -> Result<SearchOutcome> {
         let indexer = Self::central_indexer()?;
         let current_project = match scope {
             Some(_) => None,
@@ -244,23 +245,32 @@ impl Store {
             SearchMode::Keyword => {
                 let hits = search_keyword(indexer.connection(), &opts)?;
                 if hits.is_empty() {
+                    // The index is a rebuildable cache, so an empty result may
+                    // just mean a stale one. Rebuild and retry once.
                     let indexed = Self::reindex_all()?;
                     if indexed > 0 {
-                        return search_keyword(indexer.connection(), &opts);
+                        return Ok(SearchOutcome::complete(search_keyword(
+                            indexer.connection(),
+                            &opts,
+                        )?));
                     }
                 }
-                Ok(hits)
+                Ok(SearchOutcome::complete(hits))
             }
             SearchMode::Semantic => {
+                // Asked for semantic only: fail rather than silently substitute
+                // keyword ranking, so the caller can choose what to do.
                 let client = EmbeddingClient::new(None)?;
-                search_semantic(indexer.connection(), &opts, &client)
+                Ok(SearchOutcome::complete(search_semantic(
+                    indexer.connection(),
+                    &opts,
+                    &client,
+                )?))
             }
             SearchMode::Hybrid => {
-                if let Ok(client) = EmbeddingClient::new(None) {
-                    search_hybrid(indexer.connection(), &opts, &client)
-                } else {
-                    search_keyword(indexer.connection(), &opts)
-                }
+                // Falls back to keyword-only when embeddings are unavailable, and
+                // reports it in the outcome — see `search_hybrid_resilient`.
+                search_hybrid_resilient(indexer.connection(), &opts)
             }
         }
     }

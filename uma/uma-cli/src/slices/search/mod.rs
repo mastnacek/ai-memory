@@ -86,7 +86,7 @@ pub fn run(args: SearchArgs) -> Result<()> {
         .transpose()?
         .map(|dt| dt.with_timezone(&Utc));
 
-    let hits = Store::search_all(
+    let outcome = Store::search_all(
         &args.query,
         scope_filter.as_ref(),
         type_filter.as_ref(),
@@ -95,12 +95,21 @@ pub fn run(args: SearchArgs) -> Result<()> {
         as_of_dt,
         args.limit,
     )?;
+    let hits = &outcome.hits;
+
+    // Report a degraded mode up front, never as a trailing footnote: results
+    // ranked by BM25 while the caller asked for hybrid are misleading if the
+    // difference is buried after a page of output.
+    let note = outcome.note();
 
     if hits.is_empty() {
         println!(
             "No facts matching '{}' found (mode: {:?}).",
             args.query, mode
         );
+        if let Some(ref note) = note {
+            println!("! {note}");
+        }
         return Ok(());
     }
 
@@ -109,6 +118,9 @@ pub fn run(args: SearchArgs) -> Result<()> {
         hits.len(),
         mode
     );
+    if let Some(ref note) = note {
+        println!("! {note}\n");
+    }
     for (idx, hit) in hits.iter().enumerate() {
         let status_badge = status_suffix(&hit.status);
 

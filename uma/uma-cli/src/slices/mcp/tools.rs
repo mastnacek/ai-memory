@@ -151,7 +151,7 @@ fn search(args: &Value) -> Result<String, String> {
         })
         .transpose()?;
 
-    let hits = Store::search_all(
+    let outcome = Store::search_all(
         &query,
         scope.as_ref(),
         fact_type.as_ref(),
@@ -162,11 +162,27 @@ fn search(args: &Value) -> Result<String, String> {
     )
     .map_err(|err| err.to_string())?;
 
+    // A degraded mode is surfaced first, so a client cannot mistake BM25
+    // ranking for the hybrid ranking it asked for.
+    let note = outcome.note();
+    let hits = &outcome.hits;
+
     if hits.is_empty() {
-        return Ok(format!("No facts matching '{query}' (mode: {mode:?})."));
+        let mut out = format!("No facts matching '{query}' (mode: {mode:?}).");
+        if let Some(note) = note {
+            out.push_str(&format!("\n! {note}"));
+        }
+        return Ok(out);
     }
 
-    let mut out = format!("Found {} match(es) [mode: {mode:?}]:\n", hits.len());
+    let mut out = String::new();
+    if let Some(note) = note {
+        out.push_str(&format!("! {note}\n\n"));
+    }
+    out.push_str(&format!(
+        "Found {} match(es) [mode: {mode:?}]:\n",
+        hits.len()
+    ));
     for (idx, hit) in hits.iter().enumerate() {
         out.push_str(&format!(
             "{}. {} [{}]{} (score {:.3})\n   ID: {}\n",
