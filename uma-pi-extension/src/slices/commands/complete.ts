@@ -176,67 +176,67 @@ export function getUmaCompletions(
   const subcommands: AutocompleteItem[] = [
     {
       value: "search ",
-      label: "search",
+      label: "🔍 search",
       description: "Search memory facts (BM25 keyword search)",
     },
     {
       value: "list",
-      label: "list",
+      label: "📋 list",
       description: "List project memories",
     },
     {
       value: "list global",
-      label: "list global",
+      label: "🌐 list global",
       description: "List global user memories",
     },
     {
       value: "read ",
-      label: "read",
+      label: "📖 read",
       description: "Read memory fact details by ID",
     },
     {
       value: "reindex",
-      label: "reindex",
+      label: "♻️ reindex",
       description: "Rebuild centralized SQLite index from markdown files",
     },
     {
       value: "timeline",
-      label: "timeline",
+      label: "🕰️ timeline",
       description: "Show how facts evolved (supersession chains)",
     },
     {
       value: "export ",
-      label: "export",
+      label: "📦 export",
       description: "Write memory as a portable OKF bundle",
     },
     {
       value: "doctor",
-      label: "doctor",
+      label: "🩺 doctor",
       description: "Read-only health report on the store and index",
     },
     {
       value: "lang ",
-      label: `lang (${currentLang})`,
+      label: `🌐 lang (${currentLang})`,
       description: `Switch UI language (current: ${currentLang})`,
     },
     {
       value: "auto-approve ",
-      label: `auto-approve (${currentAuto ? "on" : "off"})`,
+      label: `✅ auto-approve (${currentAuto ? "on" : "off"})`,
       description: `Toggle review modal (current: ${currentAuto ? "on" : "off"})`,
     },
     {
       value: "recall ",
-      label: `recall (${currentGate ? "on" : "off"})`,
+      label: `🧠 recall (${currentGate ? "on" : "off"})`,
       description: `Toggle the fastbrain recall gate (current: ${currentGate ? "on" : "off"})`,
     },
     {
       value: "judge ",
-      label: `judge (${currentJudge})`,
+      label: `⚖️ judge (${currentJudge})`,
       description: `Recall judge transport (current: ${currentJudge})`,
     },
     {
       value: "immune ",
-      label: `immune (${state.config.immuneMode})`,
+      label: `🛡️ immune (${state.config.immuneMode})`,
       description: "Immune interceptor mode (off | warn | ask | auto)",
     },
   ];

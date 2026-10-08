@@ -44,6 +44,13 @@ export interface Strings {
   templateLabel: string;
   staleAfterLabel: string;
   sinceLabel: string;
+  noTags: string;
+  titleLabel: string;
+  moreLines: string;
+  actionsPrompt: string;
+  hintSelect: string;
+  hintConfirm: string;
+  hintCancel: string;
 }
 
 const STRINGS: Record<Locale, Strings> = {
@@ -90,6 +97,13 @@ const STRINGS: Record<Locale, Strings> = {
     templateLabel: "Template (not executed)",
     staleAfterLabel: "Valid until (re-verify after)",
     sinceLabel: "Valid from",
+    noTags: "(no tags)",
+    titleLabel: "Title",
+    moreLines: "+{n} more lines",
+    actionsPrompt: "Choose an action:",
+    hintSelect: "select",
+    hintConfirm: "confirm",
+    hintCancel: "cancel",
   },
   cs: {
     proposalHeader: "🧠 UMA • Návrh zápisu do paměti",
@@ -134,6 +148,13 @@ const STRINGS: Record<Locale, Strings> = {
     templateLabel: "Šablona (nespouští se)",
     staleAfterLabel: "Platí do (poté znovu ověřit)",
     sinceLabel: "Platí od",
+    noTags: "(žádné tagy)",
+    titleLabel: "Název",
+    moreLines: "+{n} řádků",
+    actionsPrompt: "Vyberte akci:",
+    hintSelect: "vybrat",
+    hintConfirm: "potvrdit",
+    hintCancel: "zrušit",
   },
 };
 
