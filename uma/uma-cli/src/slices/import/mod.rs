@@ -122,7 +122,12 @@ fn collect(args: &ImportSessionsArgs) -> Result<Vec<SessionDetail>> {
             vec![read_detail(&file, source)?]
         }
         None => {
-            let wanted = args.source.as_deref().unwrap_or("all").trim().to_lowercase();
+            let wanted = args
+                .source
+                .as_deref()
+                .unwrap_or("all")
+                .trim()
+                .to_lowercase();
             let mut records = Vec::new();
             for (source, root) in uma_core::sources::default_roots() {
                 let include = match wanted.as_str() {

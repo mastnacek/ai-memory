@@ -50,6 +50,11 @@ pub struct SupersedeArgs {
     /// date that has already passed would make the revision stale at birth.
     #[arg(long = "stale-after", value_name = "WHEN")]
     pub stale_after: Option<String>,
+
+    /// When the revised claim started to hold (defaults to the predecessor's
+    /// `since` — a revision restates an existing claim, so its origin keeps)
+    #[arg(long = "since", value_name = "WHEN")]
+    pub since: Option<String>,
 }
 
 /// Executes the Supersede vertical slice: chains supersession and invalidates previous fact.
@@ -93,6 +98,13 @@ pub fn run(args: SupersedeArgs) -> Result<()> {
     new_fact.validity.stale_after = match args.stale_after {
         Some(raw) => Some(parse_datetime_or_date(&raw)?),
         None => old_fact.validity.stale_after,
+    };
+    // Same inheritance logic: a revision restates the claim, so unless the
+    // caller states otherwise (imports correcting an origin date), the claim
+    // has been true since the predecessor said it was.
+    new_fact.validity.since = match args.since {
+        Some(raw) => parse_datetime_or_date(&raw)?,
+        None => old_fact.validity.since,
     };
 
     let store = get_store(&scope)?;

@@ -138,7 +138,8 @@ fn mutating_specs() -> Vec<ToolSpec> {
                     "scope": { "type": "string", "description": "Defaults to the predecessor's scope." },
                     "tags": { "type": "array", "items": { "type": "string" } },
                     "description": { "type": "string" },
-                    "staleAfter": { "type": "string", "description": "When the claim needs re-verification; defaults to the predecessor's. ISO 8601 or a bare date." }
+                    "staleAfter": { "type": "string", "description": "When the claim needs re-verification; defaults to the predecessor's. ISO 8601 or a bare date." },
+                    "since": { "type": "string", "description": "When the revised claim started to hold; defaults to the predecessor's. ISO 8601 or a bare date." }
                 },
                 "required": ["oldId", "title", "body"]
             }),

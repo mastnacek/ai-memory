@@ -12,6 +12,19 @@ function resolveProjectName(cwd: string): string {
   return base || "project";
 }
 
+/// Maps the proposal's scope for display and editing in the modal.
+///
+/// The generic default "project" (the tool's fallback) and an empty scope
+/// become the current project name; "global" stays global; an explicit scope
+/// ("mozek_rust", a dead project imported from a session) passes through
+/// untouched — the reviewer can still toggle it with the scope action.
+export function normalizeScope(initial: string, projectName: string): string {
+  const lowered = initial.trim().toLowerCase();
+  if (lowered === "global") return "global";
+  if (lowered === "" || lowered === "project") return projectName;
+  return initial;
+}
+
 export async function showProposalModal(
   ctx: ExtensionContext,
   initialProposal: MemoryProposal,
@@ -28,11 +41,15 @@ export async function showProposalModal(
   }
 
   // Normalize initial scope
-  const normalizedInitialScope =
-    initialProposal.scope.toLowerCase() === "global" ? "global" : projectName;
+  const normalizedInitialScope = normalizeScope(initialProposal.scope, projectName);
 
   const result = await ctx.ui.custom<ProposalResult | null>((tui, theme, _kb, done) => {
+    // Fields the reviewer does not edit (supersedes, template, stale_after,
+    // since) must survive the round-trip: dropping them silently changed
+    // what would be stored — an approved proposal is the reviewed contract,
+    // so everything the tool proposed has to come back in the result.
     const proposal: MemoryProposal = {
+      ...initialProposal,
       title: initialProposal.title,
       body: initialProposal.body,
       type: initialProposal.type,

@@ -268,6 +268,10 @@ fn supersede(args: &Value) -> Result<String, String> {
         Some(raw) => Some(parse_datetime_or_date(&raw).map_err(|err| err.to_string())?),
         None => predecessor.validity.stale_after,
     };
+    fact.validity.since = match str_arg(args, "since") {
+        Some(raw) => parse_datetime_or_date(&raw).map_err(|err| err.to_string())?,
+        None => predecessor.validity.since,
+    };
 
     let stored = store
         .supersede(&old_id, fact)

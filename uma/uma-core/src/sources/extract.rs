@@ -147,7 +147,7 @@ const DECISION_MARKERS: &[&str] = &[
 /// True when the turn is small talk or a session-control command.
 fn is_noise(lower: &str) -> bool {
     SMALL_TALK.iter().any(|m| lower.starts_with(m))
-        || META_COMMAND.iter().any(|m| lower == *m)
+        || META_COMMAND.contains(&lower)
         || lower.len() < 12
 }
 
@@ -167,7 +167,7 @@ fn classify(lower: &str) -> CandidateKind {
 /// A suggested title: the first sentence, trimmed to something readable.
 fn suggest_title(text: &str) -> String {
     let first = text
-        .split(|c: char| c == '.' || c == '?' || c == '!' || c == '\n')
+        .split(['.', '?', '!', '\n'])
         .find(|s| !s.trim().is_empty())
         .unwrap_or(text);
     let mut title = first.trim().to_string();
@@ -236,10 +236,7 @@ pub fn candidates_from(detail: &SessionDetail, max_per_session: usize) -> Vec<Ca
 /// wording changes ("fine-tune the theme" / "fine-tune and perfect the theme"),
 /// so the pool is de-duplicated across sessions by near-identical title. The
 /// first occurrence wins and keeps its own provenance.
-pub fn candidates_from_many(
-    details: &[SessionDetail],
-    max_per_session: usize,
-) -> Vec<Candidate> {
+pub fn candidates_from_many(details: &[SessionDetail], max_per_session: usize) -> Vec<Candidate> {
     let mut seen_titles: Vec<Vec<String>> = Vec::new();
     let mut candidates = Vec::new();
     for detail in details {
@@ -249,9 +246,10 @@ pub fn candidates_from_many(
             // the kernel's Jaccard — the same primitive the consolidator uses
             // for proposing merges — rather than byte prefixes.
             let tokens = crate::similarity::tokenize(&candidate.suggested_title);
-            if seen_titles.iter().any(|s| {
-                crate::similarity::jaccard(s, &tokens) >= CROSS_SESSION_DUPLICATE
-            }) {
+            if seen_titles
+                .iter()
+                .any(|s| crate::similarity::jaccard(s, &tokens) >= CROSS_SESSION_DUPLICATE)
+            {
                 continue;
             }
             seen_titles.push(tokens);
