@@ -4,6 +4,7 @@ import * as path from "node:path";
 import type { MemoryProposal, ProposalResult } from "./types.js";
 import { stringsFor } from "./i18n.js";
 import { renderProposalView } from "./modal_renderer.js";
+import { DisplayTranslation } from "../slices/translate/index.js";
 
 type EditField = "title" | "body" | "tags" | null;
 
@@ -61,6 +62,14 @@ export async function showProposalModal(
     let editField: EditField = null;
     let cachedLines: string[] | undefined;
 
+    // Display translation + full-text scroll state; `proposal` must keep the
+    // ORIGINAL body because what the modal returns on approval is what gets
+    // stored (see slices/translate/README.md).
+    let showTranslation = lang === "cs";
+    let fullView = false;
+    let scrollOffset = 0;
+    const VIEWPORT = 16;
+
     const editorTheme: EditorTheme = {
       borderColor: (str: string) => theme.fg("accent", str),
       selectList: {
@@ -73,6 +82,23 @@ export async function showProposalModal(
     };
 
     const editor = new Editor(tui, editorTheme);
+
+    const displayTranslation = new DisplayTranslation(ctx, refresh);
+    if (showTranslation) displayTranslation.start(proposal.body);
+
+    /** The body the modal displays — translated cache or the original. */
+    function displayBody(): string {
+      return displayTranslation.bodyFor(proposal.body, showTranslation);
+    }
+
+    function fullBodyLines(): string[] {
+      return displayBody().split("\n");
+    }
+
+    function clampScroll(): void {
+      const max = Math.max(0, fullBodyLines().length - VIEWPORT);
+      scrollOffset = Math.min(Math.max(0, scrollOffset), max);
+    }
 
     function startEditing(field: EditField) {
       editField = field;
@@ -130,7 +156,36 @@ export async function showProposalModal(
         return;
       }
 
-      const actionsCount = 6;
+      // ── Full-text scroll view: arrows scroll, Esc returns to the menu ──
+      if (fullView) {
+        if (matchesKey(data, Key.up)) {
+          scrollOffset = Math.max(0, scrollOffset - 1);
+          refresh();
+          return;
+        }
+        if (matchesKey(data, Key.down)) {
+          scrollOffset = Math.min(
+            Math.max(0, fullBodyLines().length - VIEWPORT),
+            scrollOffset + 1,
+          );
+          refresh();
+          return;
+        }
+        if (data === "c" || data === "C") {
+          showTranslation = !showTranslation;
+          clampScroll();
+          refresh();
+          return;
+        }
+        if (matchesKey(data, Key.escape) || matchesKey(data, Key.enter)) {
+          fullView = false;
+          refresh();
+          return;
+        }
+        return;
+      }
+
+      const actionsCount = 7;
 
       if (matchesKey(data, Key.up)) {
         actionIndex = Math.max(0, actionIndex - 1);
@@ -159,6 +214,17 @@ export async function showProposalModal(
         toggleScope();
         return;
       }
+      if (data === "v" || data === "V") {
+        fullView = true;
+        scrollOffset = 0;
+        refresh();
+        return;
+      }
+      if (data === "c" || data === "C") {
+        showTranslation = !showTranslation;
+        refresh();
+        return;
+      }
 
       if (matchesKey(data, Key.enter)) {
         switch (actionIndex) {
@@ -175,9 +241,14 @@ export async function showProposalModal(
             startEditing("tags");
             break;
           case 4:
-            toggleScope();
+            fullView = true;
+            scrollOffset = 0;
+            refresh();
             break;
           case 5:
+            toggleScope();
+            break;
+          case 6:
             done({ action: "rejected", proposal });
             break;
           default:
@@ -194,6 +265,18 @@ export async function showProposalModal(
     function render(width: number): string[] {
       if (cachedLines) return cachedLines;
       const editorLines = editField !== null ? editor.render(Math.max(20, width - 8)) : [];
+      // The note explains what the reviewer is looking at: pending / shown /
+      // failed translation — never silently swap the language.
+      const bodyNote =
+        editField === null
+          ? displayTranslation.pending
+            ? s.translatingNote
+            : showTranslation && !displayTranslation.failed
+              ? s.translatedNote
+              : displayTranslation.failed
+                ? s.translationFailedNote
+                : undefined
+          : undefined;
       const lines = renderProposalView({
         proposal,
         projectName,
@@ -203,6 +286,9 @@ export async function showProposalModal(
         width,
         theme,
         s,
+        bodyText: displayBody(),
+        bodyNote,
+        fullView: fullView ? { scrollOffset, viewportLines: VIEWPORT } : undefined,
       });
       cachedLines = lines;
       return lines;

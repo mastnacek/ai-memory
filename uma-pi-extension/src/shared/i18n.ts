@@ -51,6 +51,11 @@ export interface Strings {
   hintSelect: string;
   hintConfirm: string;
   hintCancel: string;
+  actionViewFull: string;
+  fullViewHint: string;
+  translatingNote: string;
+  translatedNote: string;
+  translationFailedNote: string;
 }
 
 const STRINGS: Record<Locale, Strings> = {
@@ -66,6 +71,11 @@ const STRINGS: Record<Locale, Strings> = {
     actionEditTags: "[t]      🏷️   Edit Tags",
     actionToggleScope: "[s]      🔄  Toggle Scope",
     actionReject: "[Esc]    ❌  Reject / Discard",
+    actionViewFull: "[v]      📜  Full text (scrollable)",
+    fullViewHint: "↑/↓ scroll · c original/Czech · Esc back",
+    translatingNote: "🌐 translating for display… (the original is stored)",
+    translatedNote: "🌐 display translation — the ORIGINAL is saved (c: original)",
+    translationFailedNote: "🌐 translation unavailable — showing the original",
     editPromptTitle: "Edit Title:",
     editPromptBody: "Edit Content (Markdown):",
     editPromptTags: "Edit Tags (comma-separated):",
@@ -117,6 +127,11 @@ const STRINGS: Record<Locale, Strings> = {
     actionEditTags: "[t]      🏷️   Upravit tagy",
     actionToggleScope: "[s]      🔄  Přepnout rozsah",
     actionReject: "[Esc]    ❌  Zamítnout a zahodit",
+    actionViewFull: "[v]      📜  Celý text (s rolováním)",
+    fullViewHint: "↑/↓ rolovat · c originál/česky · Esc zpět",
+    translatingNote: "🌐 překládám pro zobrazení… (ukládá se originál)",
+    translatedNote: "🌐 zobrazený překlad — ukládá se ORIGINÁL (c: originál)",
+    translationFailedNote: "🌐 překlad nedostupný — zobrazuje se originál",
     editPromptTitle: "Upravit název:",
     editPromptBody: "Upravit obsah (Markdown):",
     editPromptTags: "Upravit tagy (oddělené čárkou):",

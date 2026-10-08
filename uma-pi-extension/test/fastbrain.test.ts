@@ -107,3 +107,56 @@ test("no-trigger and zero-fact verdicts list no facts", () => {
   assert.ok(!closed.includes("\n   1."), closed);
   assert.ok(!formatGateDecision("why?", verdict([]), "en").includes("\n   1."));
 });
+
+import { buildTranslateMessages } from "../src/slices/translate/prompt.ts";
+import { stringsFor } from "../src/shared/i18n.ts";
+import { renderProposalView } from "../src/shared/modal_renderer.ts";
+import { visibleWidth } from "@earendil-works/pi-tui";
+
+test("translate prompt pins the preservation contract", () => {
+  const msgs = buildTranslateMessages("## Rule\n- use ULID 01M4DQ9C37YR0J7ZG358DQQA6F");
+  assert.equal(msgs.length, 2);
+  assert.equal(msgs[0].role, "system");
+  assert.ok(msgs[0].content.includes("ULID"));
+  assert.ok(msgs[0].content.includes("#tag"));
+  assert.ok(msgs[0].content.includes("Translate only the prose"));
+  assert.equal(msgs[1].role, "user");
+  assert.equal(msgs[1].content, "## Rule\n- use ULID 01M4DQ9C37YR0J7ZG358DQQA6F");
+});
+
+const demoTheme = { fg: (_c: string, t: string) => t, bg: (_c: string, t: string) => t, bold: (t: string) => t } as any;
+const longBody = Array.from({ length: 30 }, (_, i) => `Line ${i + 1} of the fact body.`).join("\n");
+const demoProposal = {
+  title: "Full text demo",
+  body: longBody,
+  type: "decision",
+  scope: "global",
+  tags: ["demo"],
+};
+const s = stringsFor("cs");
+const base = { proposal: demoProposal, projectName: "ai-memory", editField: null as null, editorLines: [] as string[], width: 80, theme: demoTheme, s };
+
+test("full view renders a scroll window with a position marker", () => {
+  const lines = renderProposalView({ ...base, actionIndex: 0, bodyText: demoProposal.body, fullView: { scrollOffset: 10, viewportLines: 16 } });
+  const joined = lines.join("\n");
+  assert.ok(joined.includes("Line 11 "), `scroll window starts at offset: ${joined}`);
+  assert.ok(joined.includes("Line 26"), "window covers offset+16");
+  assert.ok(!joined.includes("Line 31"), "window does not run past the body");
+  assert.ok(joined.includes("[11–26/30]"), `position marker: ${joined}`);
+  assert.ok(lines.every((l) => visibleWidth(l) <= 80));
+});
+
+test("preview shows the translation note without touching the title", () => {
+  const lines = renderProposalView({ ...base, actionIndex: 0, bodyText: "Přeložený text.", bodyNote: s.translatedNote });
+  assert.ok(lines.join("\n").includes("ukládá se ORIGINÁL"));
+  assert.ok(lines.join("\n").includes("Full text demo"));
+  assert.ok(lines.join("\n").includes("Přeložený text."));
+});
+
+test("preview caps at 8 lines and points to [v]", () => {
+  const lines = renderProposalView({ ...base, actionIndex: 0, bodyText: demoProposal.body });
+  const joined = lines.join("\n");
+  assert.ok(joined.includes("+22 řádků"));
+  assert.ok(joined.includes("[v] 📜"));
+  assert.ok(!joined.includes("Line 9 "), "preview stops at 8 lines");
+});
