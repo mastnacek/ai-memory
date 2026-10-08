@@ -1,12 +1,14 @@
 pub mod consolidate;
 pub mod domain;
 pub mod embeddings;
+pub mod health;
 pub mod indexer;
 pub mod search;
 pub mod serialization;
 pub mod similarity;
 pub mod skill;
 pub mod store;
+pub mod timeline;
 pub mod vector_store;
 
 #[cfg(test)]

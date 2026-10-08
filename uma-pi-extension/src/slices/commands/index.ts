@@ -40,6 +40,23 @@ export function registerCommands(pi: ExtensionAPI, state: ExtensionState): void 
       } else if (subcommand === "reindex") {
         const res = await runUma(binPath, ["search", "", "--reindex"], ctx.cwd);
         ctx.ui.notify(res.stdout || liveStrings.reindexDone, "info");
+      } else if (subcommand === "timeline") {
+        // Pass the remaining flags straight through (--id, --all).
+        const res = await runUma(binPath, ["timeline", ...cleanParts.slice(1)], ctx.cwd);
+        ctx.ui.notify(res.stdout || res.stderr || liveStrings.timelineUsage, "info");
+      } else if (subcommand === "doctor") {
+        const res = await runUma(binPath, ["doctor", ...cleanParts.slice(1)], ctx.cwd);
+        ctx.ui.notify(res.stdout || res.stderr, "info");
+      } else if (subcommand === "export") {
+        // Always an OKF bundle: dumping a full JSON export into a notification
+        // would be unreadable, so a destination is required rather than optional.
+        const outIndex = cleanParts.indexOf("--out");
+        if (outIndex < 0 || !cleanParts[outIndex + 1]) {
+          ctx.ui.notify(liveStrings.exportUsage, "info");
+          return;
+        }
+        const res = await runUma(binPath, ["export", "--okf", ...cleanParts.slice(1)], ctx.cwd);
+        ctx.ui.notify(res.stdout || res.stderr, "info");
       } else if (subcommand === "lang") {
         const target = cleanParts[1];
         if (target === "cs" || target === "en") {

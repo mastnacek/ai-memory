@@ -21,7 +21,9 @@ impl Store {
     }
 
     /// Returns the canonical global store root (without creating it).
-    fn global_root_path() -> Result<PathBuf> {
+    ///
+    /// Public so health checks can inspect the location without opening it.
+    pub fn global_root_path() -> Result<PathBuf> {
         let proj_dirs = ProjectDirs::from("com", "uma", "uma")
             .context("Could not determine project directories")?;
         Ok(proj_dirs.data_dir().join("global"))

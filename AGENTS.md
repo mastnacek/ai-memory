@@ -56,7 +56,18 @@ ai-memory/
     │   │   ├── lib.rs          # Library root & integration tests
     │   │   ├── domain.rs       # Domain entities (Fact, FactId, FactType, Scope, Validity)
     │   │   ├── serialization.rs# YAML Frontmatter + Markdown parser/serializer
-    │   │   └── store.rs        # File-system storage engine & path resolvers
+    │   │   ├── store.rs        # File-system storage engine & path resolvers
+    │   │   ├── indexer.rs      # SQLite FTS5 index (rebuildable cache)
+    │   │   ├── search.rs       # BM25 / semantic / hybrid RRF
+    │   │   ├── embeddings.rs   # OpenRouter embedding client
+    │   │   ├── vector_store.rs # fact_embeddings table
+    │   │   ├── similarity.rs   # Lexical similarity (tokenize, stem, Jaccard)
+    │   │   ├── consolidate.rs  # Duplicate groups + contradiction pairs
+    │   │   ├── skill.rs        # Skill template placeholder expansion
+    │   │   ├── timeline.rs     # Supersession chain reconstruction
+    │   │   └── health.rs       # Read-only index health inspection
+    │   ├── tests/
+    │   │   └── roundtrip.rs    # Integration roundtrip
     │   └── examples/
     │       └── test_store.rs
     └── uma-cli/                # Command-Line Application (VSA)
@@ -67,27 +78,22 @@ ai-memory/
             │   ├── mod.rs
             │   ├── scope.rs    # Scope resolution (project git root vs global)
             │   ├── store_helper.rs # Store factory helpers
-            │   └── format.rs   # Fact output & summary printers
+            │   └── format.rs   # Fact rendering (render_* returns String, print_* wraps it)
             └── slices/         # Vertical Feature Slices (Isolated)
                 ├── mod.rs      # Slice registry
-                ├── write/
-                │   ├── mod.rs  # Slice S0: Write/Create fact
-                │   └── README.md
-                ├── read/
-                │   ├── mod.rs  # Slice S0: Read fact by ID
-                │   └── README.md
-                ├── list/
-                │   ├── mod.rs  # Slice S0: List facts by scope/type
-                │   └── README.md
-                ├── search/
-                │   ├── mod.rs  # Slice S1/S2: BM25 + semantic + hybrid RRF
-                │   └── README.md
-                ├── supersede/
-                │   ├── mod.rs  # Slice S4: Supersession chain
-                │   └── README.md
-                └── migrate/
-                    ├── mod.rs  # Slice S4: OKF v0.2 forward migration
-                    └── README.md
+                ├── write/      # S0: create a fact
+                ├── read/       # S0: read a fact by ID
+                ├── list/       # S0: list facts (hides deprecated by default)
+                ├── search/     # S1/S2: BM25 + semantic + hybrid RRF
+                ├── supersede/  # S4: supersession chain
+                ├── migrate/    # S4: OKF v0.2 forward migration
+                ├── consolidate/# S5: proposes merges; read-only
+                ├── skill/      # S6: template storage + expansion; never executes
+                ├── mcp/        # S7: stdio JSON-RPC; read-only unless --allow-writes
+                ├── timeline/   # S8: supersession history view
+                ├── export/     # S8: OKF bundle / JSON export
+                └── doctor/     # S8: read-only health report
+                # every slice folder = mod.rs (+ helpers) + README.md
 ```
 
 ---
@@ -106,7 +112,7 @@ When implementing new capabilities, add them as **new vertical feature slices**:
 | **S5** | Consolidation Proposer | `slices/consolidate/` (Read-only merge/deduplication + contradiction proposals) (Completed) |
 | **S6** | Procedural Skill Memory | `slices/skill/` (Template storage + expansion; **never executes**) (Completed) |
 | **S7** | Universal MCP Server | `slices/mcp/` (hand-rolled JSON-RPC stdio; **read-only unless `--allow-writes`**) (Completed) |
-| **S8** | Sync & Transport | `slices/sync/` (Git/rsync bundle sync) |
+| **S8** | Polish + Sync & Transport | `slices/{timeline,export,doctor}/` (Completed); `slices/sync/` (Git/rsync bundle sync) |
 
 ---
 

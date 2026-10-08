@@ -23,6 +23,8 @@ export interface Strings {
   langUpdated: string;
   cmdUsage: string;
   searchUsage: string;
+  timelineUsage: string;
+  exportUsage: string;
   reindexDone: string;
   langCurrent: string;
   autoApproveEnabled: string;
@@ -56,8 +58,10 @@ const STRINGS: Record<Locale, Strings> = {
     rejectedNotification: "Memory proposal rejected",
     noFactsFound: "No facts found.",
     langUpdated: "Language updated to: ",
-    cmdUsage: "Usage: /uma [search <query> | list [global] | read <id> | lang [cs|en] [--global] | auto-approve [on|off] [--global]]",
+    cmdUsage: "Usage: /uma [search <query> | list [global] | read <id> | timeline [--id <ULID>] [--all] | export --out <dir> | doctor | lang [cs|en] [--global] | auto-approve [on|off] [--global]]",
     searchUsage: "Usage: /uma search <query>",
+    timelineUsage: "Usage: /uma timeline [--id <ULID>] [--all]",
+    exportUsage: "Usage: /uma export --out <directory>",
     reindexDone: "Centralized index rebuilt successfully.",
     langCurrent: "Current language: ",
     autoApproveEnabled: "Auto-approval enabled (modal review skipped)",
@@ -89,8 +93,10 @@ const STRINGS: Record<Locale, Strings> = {
     rejectedNotification: "Návrh paměti byl zamítnut",
     noFactsFound: "Nebyly nalezeny žádné záznamy.",
     langUpdated: "Jazyk rozhraní nastaven na: ",
-    cmdUsage: "Použití: /uma [search <dotaz> | list [global] | read <id> | lang [cs|en] [--global] | auto-approve [on|off] [--global]]",
+    cmdUsage: "Použití: /uma [search <dotaz> | list [global] | read <id> | timeline [--id <ULID>] [--all] | export --out <složka> | doctor | lang [cs|en] [--global] | auto-approve [on|off] [--global]]",
     searchUsage: "Použití: /uma search <dotaz>",
+    timelineUsage: "Použití: /uma timeline [--id <ULID>] [--all]",
+    exportUsage: "Použití: /uma export --out <složka>",
     reindexDone: "Centralizovaný index byl úspěšně přebudován.",
     langCurrent: "Aktuální jazyk: ",
     autoApproveEnabled: "Automatické schvalování zapnuto (modální okno se nezobrazuje)",

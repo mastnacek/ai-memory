@@ -43,6 +43,15 @@ enum Commands {
 
     /// Serve memory over the Model Context Protocol (stdio JSON-RPC)
     Mcp(slices::mcp::McpArgs),
+
+    /// Reconstruct how facts evolved: supersession chains, oldest revision first
+    Timeline(slices::timeline::TimelineArgs),
+
+    /// Export memory as an OKF bundle or JSON
+    Export(slices::export::ExportArgs),
+
+    /// Read-only health report on the store and its index cache
+    Doctor(slices::doctor::DoctorArgs),
 }
 
 fn main() -> Result<()> {
@@ -58,5 +67,8 @@ fn main() -> Result<()> {
         Commands::Consolidate(args) => slices::consolidate::run(args),
         Commands::Skill(args) => slices::skill::run(args),
         Commands::Mcp(args) => slices::mcp::run(args),
+        Commands::Timeline(args) => slices::timeline::run(args),
+        Commands::Export(args) => slices::export::run(args),
+        Commands::Doctor(args) => slices::doctor::run(args),
     }
 }

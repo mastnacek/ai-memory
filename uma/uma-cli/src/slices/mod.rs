@@ -1,4 +1,6 @@
 pub mod consolidate;
+pub mod doctor;
+pub mod export;
 pub mod list;
 pub mod mcp;
 pub mod migrate;
@@ -6,4 +8,5 @@ pub mod read;
 pub mod search;
 pub mod skill;
 pub mod supersede;
+pub mod timeline;
 pub mod write;

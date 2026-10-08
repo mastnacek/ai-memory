@@ -9,7 +9,10 @@ use std::str::FromStr;
 use walkdir::WalkDir;
 
 /// Current layout of the `facts_fts` FTS5 table. Bump when columns change.
-const FTS_SCHEMA_VERSION: i64 = 2;
+///
+/// Public so health checks can report a mismatch between what a given
+/// `index.db` stores and what this build expects.
+pub const FTS_SCHEMA_VERSION: i64 = 2;
 
 pub struct Indexer {
     conn: Connection,

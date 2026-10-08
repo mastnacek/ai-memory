@@ -28,7 +28,7 @@ Each slice = **one user-visible capability** + its data, tools, storage, tests. 
 | **S5** | Consolidation proposer (agent-reviewed) | Merge dupes, fix contradictions | S4 (Completed) |
 | **S6** | Skill memory (procedural) | Reusable how-to with invocation template | S4 (Completed) |
 | **S7** | MCP server (stdio) | Claude Code, Cursor, OpenCode read/write same store | S1, S2 (Completed) |
-| **S8** | Cross-machine sync (git/rsync) | Portable memory | S0 |
+| **S8** | Polish commands + cross-machine sync | Portable memory | S0 (polish Completed; sync pending Q4) |
 
 **Vertical-slice rule**: Each slice ships a working `uma` CLI command + Pi tool(s) + tests. No "infrastructure slice".
 
@@ -47,21 +47,24 @@ Capabilities that were not in the roadmap but are implemented, tested and in use
 | Integration roundtrip harness | `uma-core/tests/roundtrip.rs` | write → read → list, index → search, deprecation contract. |
 | MCP server | `uma-cli/src/slices/mcp/` | Multi-client reach, read-only unless `--allow-writes`. Wire-level tested without spawning a process. |
 | Skill memory | `uma-cli/src/slices/skill/`, `uma-core/src/skill.rs` | Procedural memory: `template` frontmatter field + pure placeholder expansion. UMA expands, never executes. |
+| `uma timeline` | `slices/timeline/`, `uma-core/src/timeline.rs` | Reconstructs supersession chains (cycle-safe). The history view for `search --as-of`. |
+| `uma export` | `slices/export/` | OKF v0.2 bundle or JSON, so memory is never locked into this tool. |
+| `uma doctor` | `slices/doctor/`, `uma-core/src/health.rs` | Read-only health report. Found real index drift on its first run. |
 
-**Current tally**: 62 Rust tests (32 CLI + 26 core + 4 integration) and 7 TypeScript tests, 0 warnings in both debug and release builds.
+**Current tally**: 78 Rust tests (39 CLI + 35 core + 4 integration) and 7 TypeScript tests, 0 warnings in both debug and release builds.
 
 ### Outstanding work (as of 2026-10-08)
 
 | Item | Slice | Blocked by |
 | :--- | :--- | :--- |
-| Polish commands (`timeline`, `export --okf`, `doctor`) + `uma sync push/pull` | S8 | Question 4 (git vs rsync) |
+| `uma sync push/pull` (the polish commands are done) | S8 | Question 4 (git vs rsync) |
 | Import from prior memory systems (§9) | **unlisted** | **Speculative.** Checked 2026-10-08: none of the four source stores exist on this machine (`~/.pi/agent/memory`, `.memsearch/memory`, `~/.engram/vault`, `~/.pi/agent/pi-hermes-memory`), and their formats would have to be reverse-engineered. Revisit only when a real migration is actually needed. |
 | Local embedding fallback | S9 | Question 2 |
 | Auto-recall / context injection | S3 | On hold by operator preference (deliberate) |
 | Pi panel / `/uma status` | S9 | Question 5 (cosmetic, blocks nothing) |
 | `supersede` integration test | — | ✅ Done: `Store::supersede_within` |
 | Manual Pi test on 2+ models | — | Needs an interactive session |
-| `uma-core/src/store.rs` is 325 lines | — | Over the 300-line soft target (under the 400 hard limit): extract the path/resolver helpers |
+| Files over the 300-line soft target | — | `search.rs` **394** (nearly the 400 hard limit — split first), `indexer.rs` 338, `store.rs` 327, `consolidate.rs` 311. All under the hard limit, none urgent yet |
 | MCP cross-client test | S7 | Needs an external MCP client |
 
 ---
@@ -211,10 +214,16 @@ They share the **same `uma` binary and store**. No duplication.
 - [x] Add to a client: `claude mcp add uma -- uma mcp serve`
 - [ ] **Test**: write from Claude Code, read in Pi, search in Cursor — requires an external MCP client, so manual
 
-### **Week 9: S8 — Polish & Sync**
-- [ ] `/uma timeline` (supersession chain view), `/uma export --okf` (portable export), `/uma doctor` (store + index health)
-- [ ] Git sync: `uma sync push/pull` (bundles facts as commits) — needs question 4 answered
+### **Week 9: S8 — Polish & Sync** (polish ✅ · sync pending)
+
+- [x] `uma timeline [--id <ULID>] [--all] [--json]` — reconstructs supersession chains oldest-first, newest chain on top. Read-only, always loads deprecated facts (they *are* the history), cycle-safe
+- [x] `uma export [--json | --okf --out <dir>]` — portable JSON, or an OKF v0.2 bundle: one standalone Markdown document per fact at `<dir>/<type>/<id>.md` plus `MANIFEST.json`
+- [x] `uma doctor [--json] [--strict]` — read-only health report: roots, file counts, index coverage, schema version, embeddings, orphan embeddings, stale rows. Every non-ok finding names its remedy
+- [x] Pi: `/uma timeline`, `/uma export --out <dir>`, `/uma doctor`, with argument completions
+- [ ] Git sync: `uma sync push/pull` — **needs question 4 answered**
 - [ ] Benchmarks and a migration guide from pi-memory / memorix
+
+**Note**: `doctor` paid for itself immediately. On its first run against this repository it reported *38 indexed rows but 26 files on disk* and *12 stale rows* — leftover pollution from test stores written before the canonicality gate existed. Applying its suggested `uma search "" --reindex` took it to 9/9 ok.
 
 ### **Week 10+: S9 — Advanced Features**
 

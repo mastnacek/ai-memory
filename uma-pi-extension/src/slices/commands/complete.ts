@@ -57,6 +57,53 @@ export function getUmaCompletions(
       ];
     }
 
+    if (sub === "timeline") {
+      const subPrefix = tokens[1]?.toLowerCase() || "";
+      return [
+        {
+          value: "timeline --all",
+          label: "--all",
+          description: "Include facts that were never superseded",
+        },
+        {
+          value: "timeline --id ",
+          label: "--id <ULID>",
+          description: "Show only the chain containing this fact",
+        },
+      ].filter((o) => o.value.startsWith(`timeline ${subPrefix}`));
+    }
+
+    if (sub === "export") {
+      const subPrefix = tokens[1]?.toLowerCase() || "";
+      return [
+        {
+          value: "export --out ",
+          label: "--out <directory>",
+          description: "Write an OKF v0.2 bundle (one Markdown document per fact)",
+        },
+        {
+          value: "export --out . --include-deprecated",
+          label: "--include-deprecated",
+          description: "Also export superseded revisions",
+        },
+      ].filter((o) => o.value.startsWith(`export ${subPrefix}`));
+    }
+
+    if (sub === "doctor") {
+      return [
+        {
+          value: "doctor --json",
+          label: "--json",
+          description: "Emit the report as JSON",
+        },
+        {
+          value: "doctor --strict",
+          label: "--strict",
+          description: "Exit non-zero when a check fails",
+        },
+      ].filter((o) => o.value.startsWith("doctor"));
+    }
+
     return [];
   }
 
@@ -87,6 +134,21 @@ export function getUmaCompletions(
       value: "reindex",
       label: "reindex",
       description: "Rebuild centralized SQLite index from markdown files",
+    },
+    {
+      value: "timeline",
+      label: "timeline",
+      description: "Show how facts evolved (supersession chains)",
+    },
+    {
+      value: "export ",
+      label: "export",
+      description: "Write memory as a portable OKF bundle",
+    },
+    {
+      value: "doctor",
+      label: "doctor",
+      description: "Read-only health report on the store and index",
     },
     {
       value: "lang ",
