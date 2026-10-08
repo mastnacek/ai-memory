@@ -116,7 +116,10 @@ fn test_truncated_and_unparsable_files_still_list() {
 
     let records = scan_at(dir.path(), SessionSource::PiAgent).unwrap();
     assert_eq!(records.len(), 1, "a bad line must not drop the session");
-    assert_eq!(records[0].session_id, "019e3b13-12e9-753f-86ac-6b9bb4638e07");
+    assert_eq!(
+        records[0].session_id,
+        "019e3b13-12e9-753f-86ac-6b9bb4638e07"
+    );
 }
 
 #[test]

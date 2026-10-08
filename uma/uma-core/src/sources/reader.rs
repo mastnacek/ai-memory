@@ -37,9 +37,7 @@ fn content_text(content: &Value) -> Option<String> {
 /// True for injected/system-looking user turns (tool caveats, command wrappers).
 fn is_substantive(text: &str) -> bool {
     let trimmed = text.trim();
-    !trimmed.is_empty()
-        && !trimmed.starts_with('<')
-        && !trimmed.starts_with("[Request interrupted")
+    !trimmed.is_empty() && !trimmed.starts_with('<') && !trimmed.starts_with("[Request interrupted")
 }
 
 /// One message line, normalized across both formats.
@@ -54,13 +52,10 @@ struct Line<'a> {
 fn parse_line(obj: &Value) -> Option<Line<'_>> {
     let kind = obj.get("type")?.as_str()?;
     let message = obj.get("message")?;
-    let role = message
-        .get("role")
-        .and_then(Value::as_str)
-        .or_else(|| match kind {
-            "user" | "assistant" | "toolResult" => Some(kind),
-            _ => None,
-        })?;
+    let role = message.get("role").and_then(Value::as_str).or(match kind {
+        "user" | "assistant" | "toolResult" => Some(kind),
+        _ => None,
+    })?;
     let text = content_text(message.get("content")?);
     Some(Line { role, text })
 }
@@ -79,11 +74,20 @@ pub fn scan_at(root: &Path, source: SessionSource) -> Result<Vec<SessionRecord>>
     }
 
     let mut records = Vec::new();
-    for project_dir in WalkDir::new(root).max_depth(1).min_depth(1).into_iter().flatten() {
+    for project_dir in WalkDir::new(root)
+        .max_depth(1)
+        .min_depth(1)
+        .into_iter()
+        .flatten()
+    {
         if !project_dir.file_type().is_dir() {
             continue;
         }
-        for entry in WalkDir::new(project_dir.path()).max_depth(1).into_iter().flatten() {
+        for entry in WalkDir::new(project_dir.path())
+            .max_depth(1)
+            .into_iter()
+            .flatten()
+        {
             let path = entry.path();
             if !entry.file_type().is_file() || path.extension().is_some_and(|x| x != "jsonl") {
                 continue;
@@ -113,7 +117,9 @@ fn read_session(path: &Path, source: SessionSource) -> Result<Option<SessionReco
 
     for line in std::io::BufReader::new(file).lines() {
         let Ok(line) = line else { continue };
-        let Ok(obj) = serde_json::from_str::<Value>(&line) else { continue };
+        let Ok(obj) = serde_json::from_str::<Value>(&line) else {
+            continue;
+        };
 
         // pi's header line carries id/timestamp; Claude Code stamps every
         // line and names the file after the session UUID.
@@ -134,7 +140,9 @@ fn read_session(path: &Path, source: SessionSource) -> Result<Option<SessionReco
             title = obj.get("aiTitle").and_then(Value::as_str).map(String::from);
         }
 
-        let Some(line) = parse_line(&obj) else { continue };
+        let Some(line) = parse_line(&obj) else {
+            continue;
+        };
         match line.role {
             "user" => {
                 user_messages += 1;
@@ -147,7 +155,9 @@ fn read_session(path: &Path, source: SessionSource) -> Result<Option<SessionReco
         }
     }
 
-    let Some(session_id) = session_id else { return Ok(None) };
+    let Some(session_id) = session_id else {
+        return Ok(None);
+    };
     Ok(Some(SessionRecord {
         source,
         project: cwd.unwrap_or_else(|| "(unknown)".to_string()),
@@ -181,8 +191,12 @@ pub fn read_detail(path: &Path, source: SessionSource) -> Result<SessionDetail> 
 
     for line in std::io::BufReader::new(file).lines() {
         let Ok(line) = line else { continue };
-        let Ok(obj) = serde_json::from_str::<Value>(&line) else { continue };
-        let Some(line) = parse_line(&obj) else { continue };
+        let Ok(obj) = serde_json::from_str::<Value>(&line) else {
+            continue;
+        };
+        let Some(line) = parse_line(&obj) else {
+            continue;
+        };
         // pi marks tool results by role (type stays "message"); Claude Code
         // emits them as user turns with tool_result blocks.
         if line.role == "assistant" {

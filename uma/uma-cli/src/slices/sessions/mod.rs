@@ -117,9 +117,7 @@ fn list_sessions(args: ListArgs) -> Result<()> {
     } else {
         total.min(args.limit)
     };
-    println!(
-        "{total} session(s), showing {shown} — [d] = project deleted from disk\n"
-    );
+    println!("{total} session(s), showing {shown} — [d] = project deleted from disk\n");
     println!(
         "  {:<6} {:<10} {:<2} {:>4}/{:<4} {:>8}  project · title",
         "source", "date", "d", "user", "subst", "size"
@@ -204,7 +202,10 @@ fn json_record(record: &SessionRecord) -> serde_json::Value {
 
 fn show_session(args: ShowArgs) -> Result<()> {
     let Some((source, file)) = find_session(&args.session)? else {
-        bail!("No session matching '{}'. Use `uma sessions list` to find one.", args.session);
+        bail!(
+            "No session matching '{}'. Use `uma sessions list` to find one.",
+            args.session
+        );
     };
     let detail = read_detail(&file, source)?;
 
@@ -222,8 +223,20 @@ fn show_session(args: ShowArgs) -> Result<()> {
     }
 
     let record = &detail.record;
-    println!("Session  {} ({})", record.session_id, record.source.as_str());
-    println!("Project  {}{}", record.project, if project_alive(record) { "" } else { "  [DELETED from disk]" });
+    println!(
+        "Session  {} ({})",
+        record.session_id,
+        record.source.as_str()
+    );
+    println!(
+        "Project  {}{}",
+        record.project,
+        if project_alive(record) {
+            ""
+        } else {
+            "  [DELETED from disk]"
+        }
+    );
     println!(
         "Started  {}   {} bytes   title: {}",
         record.started_at.format("%Y-%m-%d %H:%M UTC"),
@@ -232,10 +245,16 @@ fn show_session(args: ShowArgs) -> Result<()> {
     );
     println!(
         "Turns    {} user ({} substantive), {} assistant, {} tool result(s)",
-        record.user_messages, record.substantive_user_turns, detail.assistant_messages, detail.tool_results
+        record.user_messages,
+        record.substantive_user_turns,
+        detail.assistant_messages,
+        detail.tool_results
     );
     println!("File     {}", record.file.display());
-    println!("\nSubstantive user messages ({}):\n", detail.user_messages.len());
+    println!(
+        "\nSubstantive user messages ({}):\n",
+        detail.user_messages.len()
+    );
     for message in &detail.user_messages {
         println!("  ▸ {}", mask(message));
     }
