@@ -123,7 +123,17 @@ fn fact_mentions(fact: &Fact, needle: &str, stem: &str) -> bool {
         return false;
     }
     let text = format!("{} {}", fact.title, fact.body).replace('\\', "/");
-    text.contains(needle) || text.contains(stem)
+    if text.contains(needle) {
+        return true;
+    }
+    // The stem matches only as a whole token: "ops" must not count a
+    // correction that merely says "operations" or "operators". Note the
+    // predicate selects SEPARATORS (split cuts where it returns true), so
+    // it must reject keepers — the inverse silently tokenized punctuation
+    // runs and never matched a stem.
+    text
+        .split(|c: char| !c.is_alphanumeric() && c != '_')
+        .any(|token| token == stem)
 }
 
 /// Reads git history for the file: reverts by subject, churn by commit count.
