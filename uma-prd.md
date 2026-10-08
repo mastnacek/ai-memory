@@ -70,6 +70,8 @@ Capabilities that were not in the roadmap but are implemented, tested and in use
 | Item | Slice | Blocked by |
 | :--- | :--- | :--- |
 | `uma sync push/pull` (the polish commands are done) | S8 | Question 4 (git vs rsync) |
+| **Hybrid search degrades silently** | — | `Store::search_all` falls back to keyword-only when the embedding client cannot be built, with **no signal to the caller** — so the agent believes it got hybrid ranking and did not. `--mode semantic` errors honestly; hybrid does not. Unblocked, small: report the degradation in the result. |
+| **`stale_after` is unreachable** | — | Parsed, stored, and honoured by `is_active_at`, but **no CLI slice can ever set it**. Either wire it up (`uma write --stale-after`, surface stale facts) or remove it — an unreachable field is a lie in the data model. |
 | Import from prior memory systems (§9) | **unlisted** | **Speculative.** Checked 2026-10-08: none of the four source stores exist on this machine (`~/.pi/agent/memory`, `.memsearch/memory`, `~/.engram/vault`, `~/.pi/agent/pi-hermes-memory`), and their formats would have to be reverse-engineered. Revisit only when a real migration is actually needed. |
 | Local embedding fallback | S9 | Question 2 |
 | Auto-recall / context injection | S3 | On hold by operator preference (deliberate) |
