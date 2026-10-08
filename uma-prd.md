@@ -32,6 +32,22 @@ Each slice = **one user-visible capability** + its data, tools, storage, tests. 
 
 **Vertical-slice rule**: Each slice ships a working `uma` CLI command + Pi tool(s) + tests. No "infrastructure slice".
 
+### Delivered beyond the original plan
+
+Capabilities that were not in the roadmap but are implemented, tested and in use:
+
+| Capability | Where | Why it was needed |
+| :--- | :--- | :--- |
+| Fail-closed approval gate | `uma-pi-extension/src/hooks/approval_gate.ts` | A `tool_call` hook; no interactive UI ⇒ no write. Verified blocking `pi -p`. Guards exactly `{uma_write, uma_supersede}`. |
+| Interactive approval modal | `src/shared/modal.ts` + `modal_renderer.ts` | Approve / edit title / body / tags / toggle scope / reject, in `cs` + `en`. Review before consent. |
+| Two skills split by audience | `skills/uma-memory/`, `.pi/skills/uma-memory-pi/` | The general skill must stay correct for agents with no Pi tools. |
+| `uma list` status filtering | `slices/list/` | Hides deprecated facts by default (mirrors `search`); showing a superseded rule beside its replacement invites acting on stale memory. |
+| `uma read --json` | `slices/read/` | Lets the Pi supersede modal prefill the predecessor's real type/scope/tags. |
+| Slice READMEs + folder layout | every `slices/<feature>/` | Colocated what/why/invariant docs; see AGENTS.md §2. |
+| Integration roundtrip harness | `uma-core/tests/roundtrip.rs` | write → read → list, index → search, deprecation contract. |
+
+**Current tally**: 33 Rust tests (11 CLI + 19 core + 3 integration) and 7 TypeScript tests, 0 warnings.
+
 ---
 
 ## 3. Data Model
@@ -102,9 +118,16 @@ They share the **same `uma` binary and store**. No duplication.
 ```
 
 **Pi extension tools** (mirror MCP + Pi-specific):
-- `uma_write`, `uma_read`, `uma_search`, `uma_supersede`, `uma_consolidate`
-- `uma_recall` — injects top-N relevant facts into next turn (like pi-memory auto-surfacing)
-- Slash commands: `/uma status`, `/uma timeline`, `/uma export`, `/uma doctor`
+- Registered today: `uma_write`, `uma_read`, `uma_list`, `uma_search`, `uma_supersede`, `uma_consolidate`
+- `uma_recall` — **not built**: auto-injection is S3, on hold by operator preference
+- Slash commands registered today: `/uma search | list | read | reindex | lang | auto-approve`
+- `status`, `timeline`, `export`, `doctor` belong to S8 and are **not** implemented
+
+**Consent differs per tool path** — this is a design invariant, not an accident:
+- **Pi**: mutations are fail-closed behind an interactive approval modal. No UI ⇒ no write unless `autoApprove`.
+- **CLI**: unconditional by design — it is the scriptable interface, so consent is the human typing the command. It must never be used to work around the gate.
+- **MCP**: has no modal, so it must not expose write tools without an explicit, launch-time operator opt-in. See §10 question 7.
+- **`uma_consolidate` is read-only and therefore ungated** — it proposes, it never applies. Gating a read would make approval routine.
 
 ---
 
@@ -311,21 +334,23 @@ Imports preserve `created_at`, map types, create supersession chains for conflic
 
 ## 10. Open Questions for You
 
-1. **OpenRouter embedding model**: `openai/text-embedding-3-large` (3072-dim) OK, or prefer `nomic-embed-text` (768-dim) / `jina-embeddings-v3` (1024-dim) / `mistral-embed` (1024-dim)?
-2. **Fallback**: if OpenRouter unavailable, allow local fallback (e.g., `candle` + `bge-m3` ONNX)?
-3. **Skill invocation**: template expansion only, or also allow shell command templates?
-4. **Sync**: git-based (commits = fact changes) or custom rsync protocol?
-5. **Pi panel**: TUI (like pi-blackhole) or simple text status?
-6. **Model for consolidation proposer**: reuse Pi's active model, or dedicated cheap model (e.g., `qwen3-8b` via Ollama)?
+1. ~~**OpenRouter embedding model**~~ — **Resolved**: `qwen/qwen3-embedding-8b`.
+2. **Fallback**: if OpenRouter unavailable, allow local fallback (e.g., `candle` + `bge-m3` ONNX)? *Open — still the only hard external dependency in the read path.*
+3. **Skill invocation**: template expansion only, or also allow shell command templates? *Open — blocks S6.*
+4. **Sync**: git-based (commits = fact changes) or custom rsync protocol? *Open — blocks S8.*
+5. **Pi panel**: TUI (like pi-blackhole) or simple text status? *Open — cosmetic, blocks nothing.*
+6. ~~**Model for consolidation proposer**~~ — **Resolved**: none. S5 is deterministic lexical analysis (tokenize → light stem → Jaccard), so it needs no model at all and is fully testable offline.
+7. **MCP write policy**: `uma mcp serve` is a new tool path with **no modal**, so how does it obtain consent? *Open — blocks S7. Shipping write tools without an explicit launch-time opt-in would reopen the silent-write hole the approval gate closed.*
 
 ---
 
 ## 11. Acceptance Criteria (Definition of Done per Slice)
 
-- [ ] `uma <cmd>` works standalone (no Pi)
-- [ ] Pi tool registered, callable, returns typed result
-- [ ] Unit tests: domain logic, indexer, search fusion
-- [ ] Integration test: write → search → read → supersede roundtrip
+- [x] `uma <cmd>` works standalone (no Pi)
+- [x] Pi tool registered, callable, returns typed result
+- [x] Unit tests: domain logic, indexer, search fusion
+- [x] Integration test: `uma-core/tests/roundtrip.rs` — write → read → list, index → search, deprecation contract
+- [ ] Integration test for `supersede`: blocked by a real design flaw — `Store::supersede` resolves the **real** global/project roots internally instead of using the store it was called on, so a test would write to live memory. Fix: let the caller inject the target store. Until then it is verified manually and through unit coverage.
 - [ ] Manual test in Pi session with 2+ models (Opus, Sonnet, local)
 - [x] Docs updated: `slices/<feature>/README.md` — colocated with the slice (what it does, why it exists, its invariant), not a central `docs/` tree
 
@@ -334,22 +359,31 @@ Imports preserve `created_at`, map types, create supersession chains for conflic
 ## 12. Repository Layout
 
 ```
-uma/
-├── Cargo.toml                    # workspace
-├── uma-core/                     # Rust: domain, store, indexer, search, consolidation
-├── uma-cli/                      # Rust: CLI entry (uma)
-├── uma-mcp/                      # Rust: MCP stdio server (rmcp)
-├── uma-pi-extension/             # TypeScript: Pi extension
-├── docs/
-│   ├── architecture.md
-│   ├── slice-0-core.md
-│   ├── slice-1-keyword-search.md
-│   └── ...
-├── tests/
-│   ├── integration/              # end-to-end via CLI + Pi
-│   └── fixtures/
-└── xtask/                        # Rust build automation
+ai-memory/
+├── AGENTS.md                     # Architectural mandate for AI agents
+├── uma-prd.md                    # This document
+├── uma/                          # Rust workspace
+│   ├── Cargo.toml                # workspace manifest
+│   ├── uma-core/                 # Shared kernel: domain, serialization, store,
+│   │   ├── src/                  #   indexer, search, embeddings, vector_store,
+│   │   │                         #   similarity, consolidate
+│   │   └── tests/roundtrip.rs    # integration roundtrip
+│   └── uma-cli/src/
+│       ├── main.rs               # composition root (dispatch only)
+│       ├── shared/               # kernel: scope, store_helper, format
+│       └── slices/<feature>/     # mod.rs + README.md per slice
+├── uma-pi-extension/             # TypeScript: Pi client
+│   ├── index.ts                  # composition root (state, hooks, slice wiring)
+│   ├── src/shared/               # kernel: client, config, i18n, modal, modal_renderer, state, types
+│   ├── src/hooks/approval_gate.ts
+│   ├── src/slices/<feature>/     # index.ts + README.md per slice
+│   └── test/approval_gate.test.ts
+├── skills/uma-memory/            # Harness-agnostic skill
+├── .pi/skills/uma-memory-pi/     # Pi-specific skill
+└── docs/                         # Project docs (slice docs live in-slice)
 ```
+
+Not yet created: `uma-mcp/` (S7) and `xtask/`.
 
 ---
 

@@ -11,8 +11,8 @@ const STOPWORDS: &[&str] = &[
     "the", "and", "for", "that", "this", "with", "from", "are", "was", "were", "has", "have",
     "had", "its", "our", "you", "your", "but", "not", "any", "all", "can", "will", "would",
     "should", "must", "may", "use", "using", "used", "into", "over", "than", "then", "they",
-    "them", "these", "those", "one", "two", "how", "why", "what", "when", "where", "which",
-    "who", "also", "only", "more", "most", "such", "each", "other", "some", "very",
+    "them", "these", "those", "one", "two", "how", "why", "what", "when", "where", "which", "who",
+    "also", "only", "more", "most", "such", "each", "other", "some", "very",
 ];
 
 /// Markers that flip a statement's polarity. Matching is done against the raw

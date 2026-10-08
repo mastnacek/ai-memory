@@ -145,8 +145,8 @@ pub fn analyze(facts: &[Fact], opts: &AnalyzeOptions) -> ConsolidationReport {
             // duplicate to merge — merging them would destroy the disagreement.
             if fingerprints[i].negated != fingerprints[j].negated {
                 report.contradictions.push(ContradictionPair {
-                    left: active[i].id.clone(),
-                    right: active[j].id.clone(),
+                    left: active[i].id,
+                    right: active[j].id,
                     left_title: active[i].title.clone(),
                     right_title: active[j].title.clone(),
                     score,
@@ -180,19 +180,23 @@ pub fn analyze(facts: &[Fact], opts: &AnalyzeOptions) -> ConsolidationReport {
             }
         }
         report.duplicate_groups.push(DuplicateGroup {
-            ids: members.iter().map(|&i| active[i].id.clone()).collect(),
+            ids: members.iter().map(|&i| active[i].id).collect(),
             titles: members.iter().map(|&i| active[i].title.clone()).collect(),
             score: if pairs > 0 { sum / pairs as f64 } else { 0.0 },
             reason: "overlapping title/body wording".to_string(),
         });
     }
 
-    report
-        .duplicate_groups
-        .sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
-    report
-        .contradictions
-        .sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+    report.duplicate_groups.sort_by(|a, b| {
+        b.score
+            .partial_cmp(&a.score)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    report.contradictions.sort_by(|a, b| {
+        b.score
+            .partial_cmp(&a.score)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
 
     report
 }
@@ -229,7 +233,11 @@ mod tests {
         let report = analyze(&facts, &AnalyzeOptions::default());
 
         assert_eq!(report.scanned, 2);
-        assert_eq!(report.duplicate_groups.len(), 1, "expected one merge proposal");
+        assert_eq!(
+            report.duplicate_groups.len(),
+            1,
+            "expected one merge proposal"
+        );
         let group = &report.duplicate_groups[0];
         assert_eq!(group.ids.len(), 2);
         assert!(group.score >= 0.55, "score was {}", group.score);
@@ -239,7 +247,10 @@ mod tests {
     #[test]
     fn test_opposing_facts_are_flagged_as_contradiction() {
         let facts = vec![
-            fact("Use pnpm for dependency installs", "Install dependencies with pnpm."),
+            fact(
+                "Use pnpm for dependency installs",
+                "Install dependencies with pnpm.",
+            ),
             fact(
                 "Do not use pnpm for dependency installs",
                 "Never install dependencies with pnpm.",
@@ -260,7 +271,10 @@ mod tests {
     #[test]
     fn test_unrelated_facts_produce_no_proposals() {
         let facts = vec![
-            fact("Use pnpm for dependency installs", "Install dependencies with pnpm."),
+            fact(
+                "Use pnpm for dependency installs",
+                "Install dependencies with pnpm.",
+            ),
             fact(
                 "Postgres handles connection pooling",
                 "The database layer pools connections.",
