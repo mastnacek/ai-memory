@@ -155,4 +155,34 @@ mod tests {
         assert_eq!(hits[0].title, "Adopt SQLite for FTS5 Indexing");
         Ok(())
     }
+
+    #[test]
+    fn test_non_canonical_store_does_not_pollute_central_index() -> anyhow::Result<()> {
+        // A store created from an arbitrary path (tests, temp dirs) must never
+        // write into the shared central index, or it leaves orphan rows behind.
+        let dir = tempdir()?;
+        let store = Store::new(dir.path().to_path_buf());
+        assert!(!store.is_canonical());
+
+        let fact = Fact::new(
+            Scope::Global,
+            FactType::Note,
+            "Temp Note".to_string(),
+            "Must stay out of the central index.".to_string(),
+        );
+        store.write(&fact)?;
+
+        // The markdown landed on disk...
+        assert!(store.read_by_id(&fact.id).is_ok());
+
+        // ...but no row was written to the central index.
+        let indexer = Store::central_indexer()?;
+        let count: i64 = indexer.connection().query_row(
+            "SELECT COUNT(*) FROM facts_fts WHERE id = ?1",
+            [fact.id.to_string()],
+            |r| r.get(0),
+        )?;
+        assert_eq!(count, 0, "temp store polluted the central index");
+        Ok(())
+    }
 }

@@ -20,13 +20,37 @@ impl Store {
         Self { root }
     }
 
-    /// Returns the global store instance located in the user profile.
-    pub fn global() -> Result<Self> {
+    /// Returns the canonical global store root (without creating it).
+    fn global_root_path() -> Result<PathBuf> {
         let proj_dirs = ProjectDirs::from("com", "uma", "uma")
             .context("Could not determine project directories")?;
-        let global_root = proj_dirs.data_dir().join("global");
+        Ok(proj_dirs.data_dir().join("global"))
+    }
+
+    /// Returns the global store instance located in the user profile.
+    pub fn global() -> Result<Self> {
+        let global_root = Self::global_root_path()?;
         std::fs::create_dir_all(&global_root).context("Failed to create global store directory")?;
         Ok(Self::new(global_root))
+    }
+
+    /// Whether this store is a canonical root (global or the current project's `.uma`).
+    ///
+    /// Only canonical stores feed the shared central index. Ad-hoc
+    /// `Store::new(path)` instances (tests, temp dirs) write Markdown only, so
+    /// they can never pollute the production search index with orphan rows.
+    pub fn is_canonical(&self) -> bool {
+        if let Ok(global_root) = Self::global_root_path() {
+            if self.root == global_root {
+                return true;
+            }
+        }
+        if let Ok(git_root) = Self::find_git_root() {
+            if self.root == git_root.join(".uma") {
+                return true;
+            }
+        }
+        false
     }
 
     /// Returns the project store instance for the current git repository.
@@ -77,7 +101,8 @@ impl Store {
             .join(format!("{}.md", id))
     }
 
-    /// Writes a fact to its Markdown file and immediately updates the centralized SQLite index.
+    /// Writes a fact to its Markdown file and, for canonical stores, updates
+    /// the shared central index.
     pub fn write(&self, fact: &Fact) -> Result<()> {
         let path = self.fact_path(&fact.scope, &fact.fact_type, &fact.id);
         if let Some(parent) = path.parent() {
@@ -87,10 +112,12 @@ impl Store {
         std::fs::write(&path, content)
             .with_context(|| format!("Failed to write fact to {:?}", path))?;
 
-        if let Ok(indexer) = Self::central_indexer() {
-            let _ = indexer.index_fact(fact, Some(&path));
-            if let Ok(client) = EmbeddingClient::new(None) {
-                let _ = indexer.vectorize_fact(fact, &client);
+        if self.is_canonical() {
+            if let Ok(indexer) = Self::central_indexer() {
+                let _ = indexer.index_fact(fact, Some(&path));
+                if let Ok(client) = EmbeddingClient::new(None) {
+                    let _ = indexer.vectorize_fact(fact, &client);
+                }
             }
         }
 
@@ -257,14 +284,16 @@ impl Store {
         Ok(facts)
     }
 
-    /// Deletes a fact and updates the centralized SQLite index.
+    /// Deletes a fact from disk and, for canonical stores, from the shared index.
     pub fn delete(&self, scope: &Scope, fact_type: &FactType, id: &FactId) -> Result<()> {
         let path = self.fact_path(scope, fact_type, id);
         if path.exists() {
             std::fs::remove_file(path).context("Failed to delete fact file")?;
         }
-        if let Ok(indexer) = Self::central_indexer() {
-            let _ = indexer.remove_fact(id);
+        if self.is_canonical() {
+            if let Ok(indexer) = Self::central_indexer() {
+                let _ = indexer.remove_fact(id);
+            }
         }
         Ok(())
     }

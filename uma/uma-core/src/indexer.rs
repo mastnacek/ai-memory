@@ -165,11 +165,42 @@ impl Indexer {
     }
 
     /// Rebuilds the FTS5 index from markdown directories.
+    /// Rebuilds the FTS5 index from markdown directories.
+    ///
+    /// Roots already present in the index are folded in, so reindexing from one
+    /// project never silently drops other projects from the shared index. Roots
+    /// that no longer exist on disk are skipped and therefore pruned.
     pub fn reindex_from_dirs<P: AsRef<Path>>(&self, dirs: &[P]) -> Result<usize> {
+        let mut roots: Vec<PathBuf> = Vec::new();
+        for dir in dirs {
+            let p = dir.as_ref().to_path_buf();
+            if !roots.contains(&p) {
+                roots.push(p);
+            }
+        }
+
+        // Recover store roots from existing rows: file_path is <root>/<type>/<id>.md.
+        if let Ok(mut stmt) = self
+            .conn
+            .prepare("SELECT DISTINCT file_path FROM facts_fts WHERE file_path != ''")
+        {
+            let recorded: Vec<String> = stmt
+                .query_map([], |r| r.get::<_, String>(0))?
+                .filter_map(|p| p.ok())
+                .collect();
+            for file in recorded {
+                if let Some(root) = PathBuf::from(&file).parent().and_then(|t| t.parent()) {
+                    let root = root.to_path_buf();
+                    if !roots.contains(&root) {
+                        roots.push(root);
+                    }
+                }
+            }
+        }
+
         self.conn.execute_batch("DELETE FROM facts_fts;")?;
         let mut count = 0;
-        for dir in dirs {
-            let dir_path = dir.as_ref();
+        for dir_path in &roots {
             if !dir_path.exists() {
                 continue;
             }
@@ -186,7 +217,20 @@ impl Indexer {
                 }
             }
         }
+
+        // Drop embeddings whose fact is no longer indexed (deleted files,
+        // removed temp stores) so the vector table cannot accumulate orphans.
+        let _ = self.prune_orphan_embeddings()?;
         Ok(count)
+    }
+
+    /// Deletes embeddings that no longer correspond to any indexed fact.
+    pub fn prune_orphan_embeddings(&self) -> Result<usize> {
+        let removed = self.conn.execute(
+            "DELETE FROM fact_embeddings WHERE id NOT IN (SELECT id FROM facts_fts)",
+            [],
+        )?;
+        Ok(removed)
     }
 
     /// Generates embeddings for every indexed fact that lacks a vector.
