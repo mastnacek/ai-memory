@@ -1,24 +1,28 @@
 ---
-id: 01M4DGZ8NWXV5YR18P4MNC6B29
+id: 01M4DHDXNDBTKHKNKXY8K21484
 scope: "project:ai-memory"
 type: skill
 title: verify-uma-changes
+description: "Full verification gate: cargo test, release build, extension typecheck+tests, reload"
+template: "cd {{repo}}/uma && cargo test && cargo build --release && cd {{repo}}/uma-pi-extension && npm run typecheck && npm run test"
 tags:
   - verification
   - workflow
   - testing
-status: deprecated
+status: stable
+supersedes: 01M4DGZ8NWXV5YR18P4MNC6B29
 generated:
   by: pi-agent/1.1
-  at: "2026-10-08T10:29:31.964479900+00:00"
+  at: "2026-10-08T10:37:32.205045300+00:00"
 verified:
   - by: "human:operator"
-    at: "2026-10-08T10:29:31.964481800+00:00"
-since: "2026-10-08T10:29:31.964481900+00:00"
-until: "2026-10-08T10:37:32.205831500+00:00"
+    at: "2026-10-08T10:37:32.205045400+00:00"
+since: "2026-10-08T10:37:32.205831500+00:00"
 ---
 ### Context
 Every UMA change needs the same verification sequence, and skipping part of it has already caused a miss. A release build can emit warnings while `cargo test` reports clean, because tests only compile `cfg(test)` code: an unused field warned in `cargo build --release` but not in `cargo test`, and AGENTS.md requires **zero** warnings.
+
+This skill was first created without its `template` (the running extension predated the `template` parameter and stripped it), so `uma skill invoke` reported "no invocation template". This revision restores it.
 
 ### Procedure
 Run from the repo root after any Rust or extension change:
@@ -32,4 +36,4 @@ For anything that writes memory, rehearse in a throwaway repo first (`mktemp -d 
 ### Consequences
 - Template, type, and formatting regressions are caught before they are committed.
 - Never claim a change is verified from `cargo test` alone — the release build is a distinct gate.
-- Docs and roadmap edits are part of "done", not an afterthought.
+- Step 4 is not theoretical: ignoring it silently produced this very broken skill.
