@@ -55,7 +55,7 @@ Capabilities that were not in the roadmap but are implemented, tested and in use
 | Item | Slice | Blocked by |
 | :--- | :--- | :--- |
 | Polish commands (`timeline`, `export --okf`, `doctor`) + `uma sync push/pull` | S8 | Question 4 (git vs rsync) |
-| Import from prior memory systems (§9) | **unlisted** | Never scoped into the roadmap table |
+| Import from prior memory systems (§9) | **unlisted** | **Speculative.** Checked 2026-10-08: none of the four source stores exist on this machine (`~/.pi/agent/memory`, `.memsearch/memory`, `~/.engram/vault`, `~/.pi/agent/pi-hermes-memory`), and their formats would have to be reverse-engineered. Revisit only when a real migration is actually needed. |
 | Local embedding fallback | S9 | Question 2 |
 | Auto-recall / context injection | S3 | On hold by operator preference (deliberate) |
 | Pi panel / `/uma status` | S9 | Question 5 (cosmetic, blocks nothing) |
