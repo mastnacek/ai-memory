@@ -5,6 +5,7 @@ pub mod list;
 pub mod mcp;
 pub mod migrate;
 pub mod read;
+pub mod scopes;
 pub mod search;
 pub mod skill;
 pub mod supersede;

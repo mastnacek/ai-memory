@@ -119,7 +119,20 @@ impl Store {
             }
         }
         let global_store = Self::global()?;
-        global_store.read_by_id(id)
+        if let Ok(fact) = global_store.read_by_id(id) {
+            return Ok(fact);
+        }
+
+        // A ULID is unambiguous, so a miss in the current project and global
+        // scope is not evidence of absence: the fact may live in *another*
+        // project. The index knows where every indexed fact's file is, so use
+        // it — read-only, and a miss stays a clean miss.
+        let indexer = Self::central_indexer()?;
+        if let Some(fact) = super::lookup::indexed_fact_from(indexer.connection(), id)? {
+            return Ok(fact);
+        }
+
+        anyhow::bail!("Fact with id {} not found", id)
     }
 
     /// Lists facts from this store filtered by scope and fact type.

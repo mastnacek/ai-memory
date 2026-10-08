@@ -70,7 +70,7 @@ Capabilities that were not in the roadmap but are implemented, tested and in use
 | `search.rs` split into a folder | It was 394 lines, six below the 400 hard limit — the next search change would have been refused. Now `search/{mod,keyword,semantic,fusion,outcome}.rs`, all under the soft target. |
 | `stale_after` is now settable and visible | It was parsed, stored and honoured by `is_active_at`, but **no CLI slice could set it** — an unreachable field, i.e. a lie in the data model. Now: `uma write/supersede --stale-after` (bare dates accepted), a `[STALE]` badge distinct from `[DEPRECATED]`, and a `doctor` staleness check that names the remedy. Verified end-to-end, including MCP inheritance. |
 
-**Current tally**: 104 Rust tests (58 CLI + 42 core + 4 integration) and 7 TypeScript tests, 0 warnings in both debug and release builds.
+**Current tally**: 107 Rust tests (58 CLI + 45 core + 4 integration) and 7 TypeScript tests, 0 warnings in both debug and release builds.
 
 ### Outstanding work (as of 2026-10-08)
 
@@ -247,6 +247,11 @@ A mutation attempted without `--allow-writes` is refused server-side, not merely
 - [x] Verified against a real bare remote in tests (two simulated machines): publish → clone → edit → pull → merge, plus the divergent-conflict case where the local version must survive untouched
 - [x] **Global store only, deliberately:** project memory lives inside the project's own repository and travels with it when `.uma/` is tracked; sync must never push an operator's work branch
 - [ ] Benchmarks and a migration guide from pi-memory / memorix
+
+**Found by practical use, fixed the same turn** (both read-only):
+
+- [x] `uma scopes [--json]` — cross-project discovery. Project memory is deliberately isolated, but that made cross-project recall *unreachable*: nothing listed the scopes that exist, so an agent in one project could not even name another project's scope to query with `--scope`. Now `scopes` → `search --scope <name>` → `read <id>` is a complete chain, verified live from a foreign repository.
+- [x] `read <id>` cross-scope fallback — a ULID is unambiguous, yet lookup missed facts held by a *different* project (error: "Fact not found"). `find_by_id` now consults the index for the ID's file location after current-project and global miss; a miss stays a clean miss, and a row whose file is gone stays a miss (the Markdown file is the source of truth).
 
 **Note**: `doctor` paid for itself immediately. On its first run against this repository it reported *38 indexed rows but 26 files on disk* and *12 stale rows* — leftover pollution from test stores written before the canonicality gate existed. Applying its suggested `uma search "" --reindex` took it to 9/9 ok.
 

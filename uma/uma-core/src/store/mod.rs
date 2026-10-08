@@ -4,6 +4,9 @@ use anyhow::{Context, Result};
 use directories::ProjectDirs;
 use std::path::{PathBuf};
 
+mod lookup;
+
+pub use lookup::{scope_summaries_from, ScopeSummary};
 mod ops;
 mod search;
 

@@ -93,7 +93,8 @@ ai-memory/
                 ├── timeline/   # S8: supersession history view
                 ├── export/     # S8: OKF bundle / JSON export
                 ├── doctor/     # S8: read-only health report
-                └── sync/       # S8: git-backed sync of the global store
+                ├── sync/       # S8: git-backed sync of the global store
+                └── scopes/     # cross-project scope discovery (read-only)
                 # every slice folder = mod.rs (+ helpers) + README.md
 ```
 

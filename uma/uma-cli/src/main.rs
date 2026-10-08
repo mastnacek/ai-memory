@@ -55,6 +55,9 @@ enum Commands {
 
     /// Carry memory between machines with git (the global store)
     Sync(slices::sync::SyncArgs),
+
+    /// List the memory scopes that exist (cross-project discovery)
+    Scopes(slices::scopes::ScopesArgs),
 }
 
 fn main() -> Result<()> {
@@ -74,5 +77,6 @@ fn main() -> Result<()> {
         Commands::Export(args) => slices::export::run(args),
         Commands::Doctor(args) => slices::doctor::run(args),
         Commands::Sync(args) => slices::sync::run(args),
+        Commands::Scopes(args) => slices::scopes::run(args),
     }
 }
