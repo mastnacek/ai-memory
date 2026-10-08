@@ -11,6 +11,7 @@ import { registerSkillTool } from "./src/slices/skill/index.js";
 import { registerFastbrainHook } from "./src/slices/fastbrain/index.js";
 import { registerCommands } from "./src/slices/commands/index.js";
 import { evaluateApprovalGate } from "./src/hooks/approval_gate.js";
+import { registerImmuneInterceptor } from "./src/hooks/immune_interceptor.js";
 
 export default function umaExtension(pi: ExtensionAPI): void {
   // 1. Guard against subagent recursion
@@ -44,6 +45,10 @@ export default function umaExtension(pi: ExtensionAPI): void {
 
   // 5. Guard hook: fail closed on memory mutations without an approval UI.
   track(pi.on("tool_call", (event, ctx) => evaluateApprovalGate(event, ctx, state)));
+
+  // 5b. Immune interceptor (warn-mode): memory rules + pain score before a
+  // file-mutating call lands. Never blocks; tracked like every subscription.
+  track(registerImmuneInterceptor(pi, state));
 
   // 6. Register feature slices — one call per slice, no aggregator layer.
   registerWriteTool(pi, state);

@@ -258,6 +258,20 @@ A mutation attempted without `--allow-writes` is refused server-side, not merely
 
 **Note**: `doctor` paid for itself immediately. On its first run against this repository it reported *38 indexed rows but 26 files on disk* and *12 stale rows* — leftover pollution from test stores written before the canonicality gate existed. Applying its suggested `uma search "" --reindex` took it to 9/9 ok.
 
+### **Cognitive roadmap (docs/proposals 01–05, L0–L5 pyramid)**
+
+Five architectural proposals from the operator form the long-term roadmap. Sequencing by value and invariant safety (recorded as SPAI items):
+
+| Phase | Scope | State |
+| :--- | :--- | :--- |
+| 1 | **P04 pain score** (`uma risk pain` — deterministic kernel in `uma-core/src/risk/`) + **P01 warn-mode interceptor** (rules + pain warnings before file edits; never blocks) | **Shipped 2026-10-08** |
+| 2 | P03a executable contracts (ast-grep export + generated invariant tests; block-mode only for contract-backed rules) | SPAI-003 |
+| 3 | P03b+P05a OKF v0.3 schema pass (plasticity + saliency; doctor zombie report proposes, never auto-archives) | SPAI-004 |
+| 4 | P02 shadow worker (telemetry → `.uma/.staging/` → status indicator + `/uma review` batch consent) | SPAI-005 |
+| 5 | Deferred: P04 skeptic/ledger, P05 muscle/priming/dreaming | SPAI-006 |
+
+Key invariant binding P01 to P03: **auto-blocking is reserved for deterministic contract-backed rules; probabilistic (Jev) verdicts may only warn.**
+
 ### **Week 10+: S9 — Advanced Features**
 
 > Note: this section previously duplicated S8 verbatim. It now lists the genuinely remaining advanced work.

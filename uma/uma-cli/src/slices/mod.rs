@@ -7,6 +7,7 @@ pub mod mcp;
 pub mod migrate;
 pub mod read;
 pub mod recall;
+pub mod risk;
 pub mod scopes;
 pub mod secrets;
 pub mod search;

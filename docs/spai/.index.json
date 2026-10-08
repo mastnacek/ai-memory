@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "lastUpdated": "2026-10-08 22:45:08",
+  "lastUpdated": "2026-10-08 23:15:49",
   "records": [
     {
       "id": "SPAI-001",
@@ -35,6 +35,78 @@
       "project": "ai-memory",
       "projectPath": "D:/01_programovani/ai-memory",
       "file": "2026-10-08-SPAI-002-run-uma-consolidate-scope-mozek-rust-judge-jev-on-.md"
+    },
+    {
+      "id": "SPAI-003",
+      "title": "P03a executable contracts: contract: frontmatter block → ast-grep rule export (.uma/contracts/sgconfig.yml) → generated architecture_invariants.rs + `uma contracts check`; block-mode for the immune interceptor ONLY for contract-backed rules",
+      "type": "Todo",
+      "status": "todo",
+      "symbol": ".",
+      "timestamp": "2026-10-08 23:15:05",
+      "tags": [
+        "roadmap",
+        "p03",
+        "contracts",
+        "ast-grep"
+      ],
+      "priority": "medium",
+      "project": "ai-memory",
+      "projectPath": "D:/01_programovani/ai-memory",
+      "file": "2026-10-08-SPAI-003-p03a-executable-contracts-contract-frontmatter-blo.md"
+    },
+    {
+      "id": "SPAI-004",
+      "title": "OKF v0.3 schema pass: plasticity (weight/reinforcements/half_life) + saliency (shock_level/multiplier/immune_to_decay) frontmatter blocks in domain.rs+serialization+migration+modal; doctor zombie report proposes (never auto-archives) facts below weight 0.25",
+      "type": "Todo",
+      "status": "todo",
+      "symbol": ".",
+      "timestamp": "2026-10-08 23:15:09",
+      "tags": [
+        "roadmap",
+        "p03b",
+        "p05a",
+        "okf-v0.3"
+      ],
+      "priority": "medium",
+      "project": "ai-memory",
+      "projectPath": "D:/01_programovani/ai-memory",
+      "file": "2026-10-08-SPAI-004-okf-v03-schema-pass-plasticity-weightreinforcement.md"
+    },
+    {
+      "id": "SPAI-005",
+      "title": "P02 shadow worker: telemetry capture (turn_end/tool_result: compiler recovery, reverts, dependency changes) → .uma/.staging/ drafts (JSON, no index pollution) → ctx.ui.setStatus \"✦ N drafts\" + /uma review batch approval through the modal",
+      "type": "Todo",
+      "status": "todo",
+      "symbol": ".",
+      "timestamp": "2026-10-08 23:15:12",
+      "tags": [
+        "roadmap",
+        "p02",
+        "shadow-worker",
+        "staging"
+      ],
+      "priority": "medium",
+      "project": "ai-memory",
+      "projectPath": "D:/01_programovani/ai-memory",
+      "file": "2026-10-08-SPAI-005-p02-shadow-worker-telemetry-capture-turn-endtool-r.md"
+    },
+    {
+      "id": "SPAI-006",
+      "title": "Deferred: P04 skeptic on-demand + debt ledger + epistemic-humility mode; P05 muscle routines (operator-curated only, auto-synthesis proposal-only) + priming graph + doctor --dream retrieval practice. Speculative tail — revisit after P03a+P02 land",
+      "type": "Todo",
+      "status": "todo",
+      "symbol": ".",
+      "timestamp": "2026-10-08 23:15:49",
+      "tags": [
+        "roadmap",
+        "p04",
+        "p05",
+        "deferred"
+      ],
+      "priority": "low",
+      "project": "ai-memory",
+      "projectPath": "D:/01_programovani/ai-memory",
+      "file": "2026-10-08-SPAI-006-deferred-p04-skeptic-on-demand-debt-ledger-epistem.md"
     }
   ]
 }

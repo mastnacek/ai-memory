@@ -59,6 +59,9 @@ enum Commands {
     /// List the memory scopes that exist (cross-project discovery)
     Scopes(slices::scopes::ScopesArgs),
 
+    /// File pain score from correction and git history (read-only)
+    Risk(slices::risk::RiskArgs),
+
     /// Decide whether a message needs memory recall (read-only; S3 gate)
     Recall(slices::recall::RecallArgs),
 
@@ -90,6 +93,7 @@ fn main() -> Result<()> {
         Commands::Doctor(args) => slices::doctor::run(args),
         Commands::Sync(args) => slices::sync::run(args),
         Commands::Scopes(args) => slices::scopes::run(args),
+        Commands::Risk(args) => slices::risk::run(args),
         Commands::Recall(args) => slices::recall::run(args),
         Commands::Secrets(args) => slices::secrets::run(args),
         Commands::Sessions(args) => slices::sessions::run(args),

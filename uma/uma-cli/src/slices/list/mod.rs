@@ -19,6 +19,10 @@ pub struct ListArgs {
     /// Include deprecated/superseded facts (hidden by default)
     #[arg(long = "include-deprecated")]
     pub include_deprecated: bool,
+
+    /// Emit the facts as a JSON array (full bodies, no truncation)
+    #[arg(long = "json")]
+    pub json: bool,
 }
 
 /// Executes the List vertical slice: retrieves and displays a summary list of facts.
@@ -35,6 +39,24 @@ pub fn run(args: ListArgs) -> Result<()> {
     if !args.include_deprecated {
         let now = Utc::now();
         facts.retain(|fact| fact.is_active_at(now));
+    }
+
+    if args.json {
+        let payload: Vec<serde_json::Value> = facts
+            .iter()
+            .map(|fact| {
+                serde_json::json!({
+                    "id": fact.id,
+                    "title": fact.title,
+                    "fact_type": fact.fact_type.to_string(),
+                    "scope": fact.scope.to_string(),
+                    "tags": fact.tags,
+                    "body": fact.body,
+                })
+            })
+            .collect();
+        println!("{}", serde_json::to_string_pretty(&payload)?);
+        return Ok(());
     }
 
     if facts.is_empty() {
