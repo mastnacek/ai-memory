@@ -3,12 +3,19 @@ id: 01M4D7S5YART7AGWN7RDSRNRM1
 scope: "project:ai-memory"
 type: decision
 title: Adopt Vertical Slice Architecture (VSA) for UMA
-since: "2026-10-08T07:48:55.370316300+00:00"
 tags:
   - vsa
   - architecture
   - rust
   - design
+status: stable
+generated:
+  by: pi-agent/1.1
+  at: "2026-10-08T07:48:55.370316300+00:00"
+verified:
+  - by: "human:operator"
+    at: "2026-10-08T07:48:55.370316300+00:00"
+since: "2026-10-08T07:48:55.370316300+00:00"
 ---
 ### Context
 UMA (Unified Memory Architecture) is designed as a standalone, multi-client memory engine for AI coding agents. To ensure high cohesion, low coupling, and easy extensibility across progressive slices (S0 to S9), we need a modular architecture.

@@ -3,12 +3,19 @@ id: 01M4DB2J5R7B0ME2ZGSD76T5NJ
 scope: "project:ai-memory"
 type: preference
 title: Require manual reload before testing modified Pi plugins
-since: "2026-10-08T08:46:28.536386+00:00"
 tags:
   - preference
   - pi-plugin
   - reload
   - workflow
+status: stable
+generated:
+  by: pi-agent/1.1
+  at: "2026-10-08T08:46:28.536386+00:00"
+verified:
+  - by: "human:operator"
+    at: "2026-10-08T08:46:28.536386+00:00"
+since: "2026-10-08T08:46:28.536386+00:00"
 ---
 ### Context
 When developing or modifying Pi extensions and plugins, executing tool functions immediately before the operator has reloaded the session causes runtime mismatch and disrupted interaction.

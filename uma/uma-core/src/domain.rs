@@ -123,10 +123,57 @@ impl std::str::FromStr for FactType {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+pub enum FactStatus {
+    #[default]
+    Stable,
+    Deprecated,
+    Draft,
+}
+
+impl fmt::Display for FactStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FactStatus::Stable => write!(f, "stable"),
+            FactStatus::Deprecated => write!(f, "deprecated"),
+            FactStatus::Draft => write!(f, "draft"),
+        }
+    }
+}
+
+impl std::str::FromStr for FactStatus {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.trim().to_lowercase().as_str() {
+            "stable" => Ok(FactStatus::Stable),
+            "deprecated" | "stale" => Ok(FactStatus::Deprecated),
+            "draft" => Ok(FactStatus::Draft),
+            other => anyhow::bail!("Unknown fact status: {}", other),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ActorEvent {
+    pub by: String,
+    pub at: DateTime<Utc>,
+}
+
+impl ActorEvent {
+    pub fn new(by: impl Into<String>) -> Self {
+        Self {
+            by: by.into(),
+            at: Utc::now(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Validity {
     pub since: DateTime<Utc>,
     pub until: Option<DateTime<Utc>>,
+    pub stale_after: Option<DateTime<Utc>>,
 }
 
 impl Default for Validity {
@@ -134,6 +181,7 @@ impl Default for Validity {
         Self {
             since: Utc::now(),
             until: None,
+            stale_after: None,
         }
     }
 }
@@ -144,7 +192,12 @@ pub struct Fact {
     pub scope: Scope,
     pub fact_type: FactType,
     pub title: String,
+    pub description: Option<String>,
     pub body: String,
+    pub status: FactStatus,
+    pub supersedes: Option<FactId>,
+    pub generated: Option<ActorEvent>,
+    pub verified: Vec<ActorEvent>,
     pub validity: Validity,
     pub tags: Vec<String>,
     pub links: Vec<FactId>,
@@ -157,10 +210,33 @@ impl Fact {
             scope,
             fact_type,
             title,
+            description: None,
             body,
+            status: FactStatus::Stable,
+            supersedes: None,
+            generated: Some(ActorEvent::new("pi-agent/1.1")),
+            verified: vec![ActorEvent::new("human:operator")],
             validity: Validity::default(),
             tags: Vec::new(),
             links: Vec::new(),
         }
+    }
+
+    /// Checks whether the fact is active and non-deprecated at the specified timestamp.
+    pub fn is_active_at(&self, at: DateTime<Utc>) -> bool {
+        if self.validity.since > at {
+            return false;
+        }
+        if let Some(until) = self.validity.until {
+            if at >= until {
+                return false;
+            }
+        }
+        if let Some(stale) = self.validity.stale_after {
+            if at >= stale {
+                return false;
+            }
+        }
+        self.status == FactStatus::Stable
     }
 }

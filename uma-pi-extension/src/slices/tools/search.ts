@@ -25,6 +25,16 @@ export function registerSearchTool(pi: ExtensionAPI, _state: ExtensionState): vo
           description: "Filter by fact type (decision, preference, pattern, skill, note, etc.).",
         })
       ),
+      includeDeprecated: Type.Optional(
+        Type.Boolean({
+          description: "Include deprecated/superseded facts in results (default: false).",
+        })
+      ),
+      asOf: Type.Optional(
+        Type.String({
+          description: "Point-in-time search: only facts active at this ISO 8601 datetime (e.g. '2026-01-15T00:00:00Z').",
+        })
+      ),
       limit: Type.Optional(
         Type.Number({
           description: "Maximum number of results to return (default: 10).",
@@ -36,6 +46,8 @@ export function registerSearchTool(pi: ExtensionAPI, _state: ExtensionState): vo
       if (params.mode) args.push("--mode", params.mode);
       if (params.scope) args.push("--scope", params.scope);
       if (params.type) args.push("--type", params.type);
+      if (params.includeDeprecated) args.push("--include-deprecated");
+      if (params.asOf) args.push("--as-of", params.asOf);
       if (params.limit) args.push("--limit", String(params.limit));
       return executeUma(ctx.cwd, args, "No matching facts found.");
     },

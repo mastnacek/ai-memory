@@ -86,8 +86,8 @@ When implementing new capabilities, add them as **new vertical feature slices**:
 | **S0** | Core Store + Write / Read / List | `slices/write.rs`, `slices/read.rs`, `slices/list.rs` (Completed) |
 | **S1** | Keyword Search (BM25) | `slices/search.rs` (SQLite FTS5 indexer in `uma-core`) (Completed) |
 | **S2** | Semantic Vector Search | `slices/search.rs` (OpenRouter embeddings + Hybrid RRF) (Completed) |
-| **S3** | Scopes & Frontmatter Validation | `slices/recall.rs`, validation guards |
-| **S4** | Temporal Validity & Supersession | `slices/supersede.rs` |
+| **S3** | Auto-Recall & Context Injection | `[?]` *On Hold* (Operator preference: on-demand explicit search) |
+| **S4** | Temporal Validity & Supersession | `slices/supersede.rs`, `slices/migrate.rs` (OKF v0.2 Lifecycle & Chained Supersession) (Completed) |
 | **S5** | Consolidation Proposer | `slices/consolidate.rs` (Merge/deduplication proposals) |
 | **S6** | Procedural Skill Memory | `slices/skill.rs` (Templates & execution) |
 | **S7** | Universal MCP Server | `slices/mcp.rs` (`rmcp` / JSON-RPC stdio server) |

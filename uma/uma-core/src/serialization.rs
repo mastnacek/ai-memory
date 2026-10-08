@@ -1,4 +1,4 @@
-use crate::domain::{Fact, FactId, FactType, Scope, Validity};
+use crate::domain::{ActorEvent, Fact, FactId, FactStatus, FactType, Scope, Validity};
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
 use hashlink::LinkedHashMap;
@@ -25,6 +25,53 @@ pub fn fact_to_markdown(fact: &Fact) -> Result<String> {
             Yaml::String("title".to_string()),
             Yaml::String(fact.title.clone()),
         );
+        if let Some(ref desc) = fact.description {
+            map.insert(
+                Yaml::String("description".to_string()),
+                Yaml::String(desc.clone()),
+            );
+        }
+        if !fact.tags.is_empty() {
+            map.insert(
+                Yaml::String("tags".to_string()),
+                Yaml::Array(fact.tags.iter().map(|t| Yaml::String(t.clone())).collect()),
+            );
+        }
+        map.insert(
+            Yaml::String("status".to_string()),
+            Yaml::String(fact.status.to_string()),
+        );
+        if let Some(ref sup) = fact.supersedes {
+            map.insert(
+                Yaml::String("supersedes".to_string()),
+                Yaml::String(sup.to_string()),
+            );
+        }
+        if let Some(ref gen) = fact.generated {
+            let mut gen_map = LinkedHashMap::new();
+            gen_map.insert(Yaml::String("by".to_string()), Yaml::String(gen.by.clone()));
+            gen_map.insert(
+                Yaml::String("at".to_string()),
+                Yaml::String(gen.at.to_rfc3339()),
+            );
+            map.insert(Yaml::String("generated".to_string()), Yaml::Hash(gen_map));
+        }
+        if !fact.verified.is_empty() {
+            let ver_arr = fact
+                .verified
+                .iter()
+                .map(|v| {
+                    let mut v_map = LinkedHashMap::new();
+                    v_map.insert(Yaml::String("by".to_string()), Yaml::String(v.by.clone()));
+                    v_map.insert(
+                        Yaml::String("at".to_string()),
+                        Yaml::String(v.at.to_rfc3339()),
+                    );
+                    Yaml::Hash(v_map)
+                })
+                .collect();
+            map.insert(Yaml::String("verified".to_string()), Yaml::Array(ver_arr));
+        }
         map.insert(
             Yaml::String("since".to_string()),
             Yaml::String(fact.validity.since.to_rfc3339()),
@@ -35,10 +82,10 @@ pub fn fact_to_markdown(fact: &Fact) -> Result<String> {
                 Yaml::String(until.to_rfc3339()),
             );
         }
-        if !fact.tags.is_empty() {
+        if let Some(stale) = fact.validity.stale_after {
             map.insert(
-                Yaml::String("tags".to_string()),
-                Yaml::Array(fact.tags.iter().map(|t| Yaml::String(t.clone())).collect()),
+                Yaml::String("stale_after".to_string()),
+                Yaml::String(stale.to_rfc3339()),
             );
         }
         if !fact.links.is_empty() {
@@ -60,9 +107,7 @@ pub fn fact_to_markdown(fact: &Fact) -> Result<String> {
         .dump(&yaml)
         .context("Failed to emit YAML frontmatter")?;
 
-    // YamlEmitter may emit a leading '---' document start marker; strip it
     let frontmatter_str = frontmatter_str.trim_start_matches("---\n").trim();
-
     Ok(format!("---\n{}\n---\n{}", frontmatter_str, fact.body))
 }
 
@@ -83,8 +128,67 @@ pub fn markdown_to_fact(content: &str) -> Result<Fact> {
         .as_str()
         .context("Missing or invalid title")?
         .to_string();
-    let since_str = yaml["since"].as_str().context("Missing or invalid since")?;
-    let until_str = yaml["until"].as_str();
+    let description = yaml["description"].as_str().map(String::from);
+    let status_str = yaml["status"].as_str().unwrap_or("stable");
+    let status = FactStatus::from_str(status_str).unwrap_or(FactStatus::Stable);
+    let supersedes = yaml["supersedes"]
+        .as_str()
+        .and_then(|s| FactId::from_str(s).ok());
+
+    let generated = if let Some(by) = yaml["generated"]["by"].as_str() {
+        let at = yaml["generated"]["at"]
+            .as_str()
+            .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
+            .map(|dt| dt.with_timezone(&Utc))
+            .unwrap_or_else(Utc::now);
+        Some(ActorEvent {
+            by: by.to_string(),
+            at,
+        })
+    } else {
+        None
+    };
+
+    let mut verified = Vec::new();
+    if let Some(arr) = yaml["verified"].as_vec() {
+        for v in arr {
+            if let Some(by) = v["by"].as_str() {
+                let at = v["at"]
+                    .as_str()
+                    .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
+                    .map(|dt| dt.with_timezone(&Utc))
+                    .unwrap_or_else(Utc::now);
+                verified.push(ActorEvent {
+                    by: by.to_string(),
+                    at,
+                });
+            }
+        }
+    } else if let Some(by) = yaml["verified"]["by"].as_str() {
+        let at = yaml["verified"]["at"]
+            .as_str()
+            .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
+            .map(|dt| dt.with_timezone(&Utc))
+            .unwrap_or_else(Utc::now);
+        verified.push(ActorEvent {
+            by: by.to_string(),
+            at,
+        });
+    }
+
+    let since_str = yaml["since"].as_str().unwrap_or("");
+    let since = DateTime::parse_from_rfc3339(since_str)
+        .map(|dt| dt.with_timezone(&Utc))
+        .unwrap_or_else(|_| Utc::now());
+    let until = yaml["until"]
+        .as_str()
+        .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
+        .map(|dt| dt.with_timezone(&Utc));
+    let stale_after = yaml["stale_after"]
+        .as_str()
+        .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
+        .map(|dt| dt.with_timezone(&Utc));
+
     let tags = yaml["tags"]
         .as_vec()
         .map(|v| {
@@ -105,21 +209,23 @@ pub fn markdown_to_fact(content: &str) -> Result<Fact> {
     let id = FactId::from_str(id_str).context("Invalid FactId")?;
     let scope = parse_scope(scope_str).context("Invalid scope")?;
     let fact_type = FactType::from_str(type_str).context("Invalid fact type")?;
-    let since = DateTime::parse_from_rfc3339(since_str)
-        .context("Invalid since timestamp")?
-        .with_timezone(&Utc);
-    let until = until_str
-        .map(|s| DateTime::parse_from_rfc3339(s).map(|dt| dt.with_timezone(&Utc)))
-        .transpose()
-        .context("Invalid until timestamp")?;
 
     Ok(Fact {
         id,
         scope,
         fact_type,
         title,
+        description,
         body: body.to_string(),
-        validity: Validity { since, until },
+        status,
+        supersedes,
+        generated,
+        verified,
+        validity: Validity {
+            since,
+            until,
+            stale_after,
+        },
         tags,
         links,
     })

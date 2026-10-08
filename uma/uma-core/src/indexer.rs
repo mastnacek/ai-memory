@@ -1,6 +1,5 @@
-use crate::domain::{Fact, FactId, FactType, Scope};
+use crate::domain::{Fact, FactId, Scope};
 use crate::embeddings::EmbeddingClient;
-use crate::search::SearchHit;
 use crate::serialization::markdown_to_fact;
 use crate::vector_store::{self, init_vector_schema, load_all_embeddings, save_embedding};
 use anyhow::{Context, Result};
@@ -8,6 +7,9 @@ use rusqlite::{params, Connection};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use walkdir::WalkDir;
+
+/// Current layout of the `facts_fts` FTS5 table. Bump when columns change.
+const FTS_SCHEMA_VERSION: i64 = 2;
 
 pub struct Indexer {
     conn: Connection,
@@ -34,16 +36,62 @@ impl Indexer {
         &self.conn
     }
 
-    /// Initializes both FTS5 keyword and vector storage schemas.
+    /// Initializes the FTS5 keyword and vector storage schemas.
+    ///
+    /// The FTS index is a rebuildable cache, so when the column layout changes
+    /// the old table is dropped rather than failing on a stale database.
     fn init_schema(&self) -> Result<()> {
+        self.conn
+            .execute(
+                "CREATE TABLE IF NOT EXISTS uma_meta (key TEXT PRIMARY KEY, value INTEGER NOT NULL)",
+                [],
+            )
+            .context("Failed to initialize uma_meta table")?;
+
+        let current: i64 = self
+            .conn
+            .query_row(
+                "SELECT value FROM uma_meta WHERE key = 'fts_schema_version'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap_or(0);
+
+        // Verify the *actual* column layout rather than trusting the recorded
+        // version: an older build may have stamped a version without recreating
+        // the table. `facts_fts` is a rebuildable cache, so a mismatch means drop
+        // it and let the caller reindex.
+        let has_expected_columns = {
+            let mut stmt = self.conn.prepare("PRAGMA table_info(facts_fts)")?;
+            let cols: Vec<String> = stmt
+                .query_map([], |r| r.get::<_, String>(1))?
+                .filter_map(|c| c.ok())
+                .collect();
+            !cols.is_empty() && cols.iter().any(|c| c == "description")
+        };
+
+        if !has_expected_columns || current != FTS_SCHEMA_VERSION {
+            let _ = self.conn.execute_batch("DROP TABLE IF EXISTS facts_fts;");
+        }
+
         self.conn
             .execute_batch(
                 "CREATE VIRTUAL TABLE IF NOT EXISTS facts_fts USING fts5(
-                    id UNINDEXED, scope, project_name, fact_type, title, body, tags,
-                    file_path UNINDEXED, since UNINDEXED, tokenize = 'porter unicode61'
+                    id UNINDEXED, scope, project_name, fact_type, title, description,
+                    body, tags, status, supersedes UNINDEXED, file_path UNINDEXED,
+                    since UNINDEXED, until UNINDEXED, stale_after UNINDEXED,
+                    tokenize = 'porter unicode61'
                 );",
             )
             .context("Failed to initialize centralized FTS5 schema")?;
+
+        self.conn
+            .execute(
+                "INSERT INTO uma_meta (key, value) VALUES ('fts_schema_version', ?1)
+                 ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                params![FTS_SCHEMA_VERSION],
+            )
+            .context("Failed to record FTS schema version")?;
 
         init_vector_schema(&self.conn)?;
         Ok(())
@@ -60,24 +108,43 @@ impl Indexer {
         let file_path_str = file_path
             .map(|p| p.to_string_lossy().to_string())
             .unwrap_or_default();
+        let desc_str = fact.description.clone().unwrap_or_default();
+        let status_str = fact.status.to_string();
+        let supersedes_str = fact.supersedes.map(|s| s.to_string()).unwrap_or_default();
+        let until_str = fact
+            .validity
+            .until
+            .map(|u| u.to_rfc3339())
+            .unwrap_or_default();
+        let stale_str = fact
+            .validity
+            .stale_after
+            .map(|s| s.to_rfc3339())
+            .unwrap_or_default();
 
         self.conn
             .execute("DELETE FROM facts_fts WHERE id = ?1", params![id_str])?;
-        self.conn.execute(
-            "INSERT INTO facts_fts (id, scope, project_name, fact_type, title, body, tags, file_path, since)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
-            params![
-                id_str,
-                scope_str,
-                project_name,
-                fact.fact_type.to_string(),
-                fact.title,
-                fact.body,
-                fact.tags.join(" "),
-                file_path_str,
-                fact.validity.since.to_rfc3339()
-            ],
-        )?;
+        self.conn
+            .execute(
+                "INSERT INTO facts_fts (id, scope, project_name, fact_type, title, description, body, tags, status, supersedes, file_path, since, until, stale_after)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
+                params![
+                    id_str,
+                    scope_str,
+                    project_name,
+                    fact.fact_type.to_string(),
+                    fact.title,
+                    desc_str,
+                    fact.body,
+                    fact.tags.join(" "),
+                    status_str,
+                    supersedes_str,
+                    file_path_str,
+                    fact.validity.since.to_rfc3339(),
+                    until_str,
+                    stale_str
+                ],
+            )?;
         Ok(())
     }
 
@@ -122,9 +189,11 @@ impl Indexer {
         Ok(count)
     }
 
-    /// Scans all indexed facts and generates embeddings for any facts missing vectors.
+    /// Generates embeddings for every indexed fact that lacks a vector.
     pub fn vectorize_missing(&self, client: &EmbeddingClient) -> Result<usize> {
-        let mut stmt = self.conn.prepare("SELECT id, title, body FROM facts_fts")?;
+        let mut stmt = self
+            .conn
+            .prepare("SELECT id, title, body FROM facts_fts")?;
         let mut rows = stmt.query([])?;
         let existing = load_all_embeddings(&self.conn)?;
         let mut missing = Vec::new();
@@ -153,111 +222,10 @@ impl Indexer {
 
         Ok(missing.len())
     }
-
-    /// Performs BM25-ranked keyword search across all indexed facts.
-    pub fn search_keyword(
-        &self,
-        query: &str,
-        scope: Option<&Scope>,
-        current_project: Option<&str>,
-        fact_type: Option<&FactType>,
-        limit: usize,
-    ) -> Result<Vec<SearchHit>> {
-        let trimmed_query = query.trim();
-        if trimmed_query.is_empty() {
-            return Ok(Vec::new());
-        }
-
-        let fts_query = build_fts_query(trimmed_query);
-        let mut sql = String::from(
-            "SELECT id, scope, project_name, fact_type, title,
-                    snippet(facts_fts, 5, '[match]', '[/match]', '...', 16) AS snippet,
-                    tags,
-                    file_path,
-                    bm25(facts_fts, 0.0, 1.0, 1.0, 1.0, 10.0, 2.0, 5.0, 0.0, 0.0) AS rank
-             FROM facts_fts WHERE facts_fts MATCH ?1",
-        );
-
-        match scope {
-            Some(Scope::Global) => sql.push_str(" AND scope = 'global'"),
-            Some(Scope::Project(_)) => sql.push_str(" AND project_name = ?"),
-            None => {
-                if current_project.is_some() {
-                    sql.push_str(" AND (project_name = ? OR scope = 'global')");
-                }
-            }
-        }
-
-        if fact_type.is_some() {
-            sql.push_str(" AND fact_type = ?");
-        }
-
-        sql.push_str(" ORDER BY rank ASC LIMIT ?");
-
-        let execute_search = |fts_q: &str| -> Result<Vec<SearchHit>> {
-            let mut params_vec: Vec<String> = vec![fts_q.to_string()];
-            match scope {
-                Some(Scope::Project(proj)) => params_vec.push(proj.clone()),
-                None => {
-                    if let Some(cp) = current_project {
-                        params_vec.push(cp.to_string());
-                    }
-                }
-                _ => {}
-            }
-            if let Some(ft) = fact_type {
-                params_vec.push(ft.to_string());
-            }
-
-            let mut stmt = self.conn.prepare(&sql)?;
-            let mut rows = stmt.query(rusqlite::params_from_iter(
-                params_vec
-                    .iter()
-                    .map(|s| s as &dyn rusqlite::ToSql)
-                    .chain(std::iter::once(&limit as &dyn rusqlite::ToSql)),
-            ))?;
-
-            let mut hits = Vec::new();
-            while let Some(row) = rows.next()? {
-                let id_str: String = row.get(0)?;
-                let scope_str: String = row.get(1)?;
-                let project_name: String = row.get(2)?;
-                let type_str: String = row.get(3)?;
-                let title: String = row.get(4)?;
-                let snippet: String = row.get(5)?;
-                let tags_str: String = row.get(6)?;
-                let file_path_str: String = row.get(7)?;
-                let rank: f64 = row.get(8)?;
-
-                let file_path = if file_path_str.is_empty() {
-                    None
-                } else {
-                    Some(PathBuf::from(file_path_str))
-                };
-
-                hits.push(SearchHit {
-                    id: FactId::from_str(&id_str)?,
-                    scope: parse_scope_str(&scope_str),
-                    project_name,
-                    fact_type: FactType::from_str(&type_str).unwrap_or(FactType::Note),
-                    title,
-                    snippet,
-                    tags: tags_str.split_whitespace().map(String::from).collect(),
-                    file_path,
-                    score: -rank,
-                });
-            }
-            Ok(hits)
-        };
-
-        match execute_search(&fts_query) {
-            Ok(res) => Ok(res),
-            Err(_) => execute_search(&build_safe_fts_query(trimmed_query)),
-        }
-    }
 }
 
-fn build_fts_query(query: &str) -> String {
+/// Builds a prefix-match FTS5 query from free-form user input.
+pub fn build_fts_query(query: &str) -> String {
     let tokens: Vec<&str> = query.split_whitespace().collect();
     if tokens.is_empty() {
         return query.to_string();
@@ -276,7 +244,8 @@ fn build_fts_query(query: &str) -> String {
         .join(" ")
 }
 
-fn build_safe_fts_query(query: &str) -> String {
+/// Builds a quoted FTS5 query safe against syntax errors from special characters.
+pub fn build_safe_fts_query(query: &str) -> String {
     query
         .split_whitespace()
         .map(|t| format!("\"{}\"", t.replace('"', "")))
@@ -297,10 +266,11 @@ pub fn parse_scope_str(s: &str) -> Scope {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::domain::FactType;
     use tempfile::tempdir;
 
     #[test]
-    fn test_indexer_write_search() -> Result<()> {
+    fn test_indexer_write_and_schema_version() -> Result<()> {
         let dir = tempdir()?;
         let db_path = dir.path().join("index.db");
         let indexer = Indexer::open(&db_path)?;
@@ -313,9 +283,10 @@ mod tests {
         );
         indexer.index_fact(&fact1, None)?;
 
-        let hits = indexer.search_keyword("storage", None, Some("repo-a"), None, 10)?;
-        assert_eq!(hits.len(), 1);
-        assert_eq!(hits[0].project_name, "repo-a");
+        let count: i64 = indexer
+            .connection()
+            .query_row("SELECT COUNT(*) FROM facts_fts", [], |r| r.get(0))?;
+        assert_eq!(count, 1);
         Ok(())
     }
 }

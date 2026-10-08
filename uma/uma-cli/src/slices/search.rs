@@ -1,4 +1,5 @@
 use anyhow::Result;
+use chrono::{DateTime, Utc};
 use clap::Args;
 use std::str::FromStr;
 use uma_core::{domain::FactType, search::SearchMode, store::Store};
@@ -22,6 +23,14 @@ pub struct SearchArgs {
     /// Filter by fact type (decision, preference, pattern, note, etc.)
     #[arg(short = 't', long = "type")]
     pub fact_type: Option<String>,
+
+    /// Include deprecated/superseded facts in search results
+    #[arg(long = "include-deprecated")]
+    pub include_deprecated: bool,
+
+    /// Point-in-time search: filter facts active at this ISO 8601 datetime (e.g. 2026-01-15T00:00:00Z)
+    #[arg(long = "as-of")]
+    pub as_of: Option<String>,
 
     /// Maximum number of search results to return
     #[arg(short = 'n', long = "limit", default_value = "10")]
@@ -70,12 +79,20 @@ pub fn run(args: SearchArgs) -> Result<()> {
         .transpose()?;
 
     let mode = SearchMode::from_str(&args.mode).unwrap_or(SearchMode::Hybrid);
+    let as_of_dt = args
+        .as_of
+        .as_deref()
+        .map(DateTime::parse_from_rfc3339)
+        .transpose()?
+        .map(|dt| dt.with_timezone(&Utc));
 
     let hits = Store::search_all(
         &args.query,
         scope_filter.as_ref(),
         type_filter.as_ref(),
         mode,
+        args.include_deprecated,
+        as_of_dt,
         args.limit,
     )?;
 
@@ -93,15 +110,25 @@ pub fn run(args: SearchArgs) -> Result<()> {
         mode
     );
     for (idx, hit) in hits.iter().enumerate() {
+        let status_badge = match hit.status {
+            uma_core::domain::FactStatus::Stable => "",
+            uma_core::domain::FactStatus::Deprecated => " [DEPRECATED]",
+            uma_core::domain::FactStatus::Draft => " [DRAFT]",
+        };
+
         println!(
-            "{}. {} [{}] [{}] (score: {:.3})",
+            "{}. {} [{}] [{}]{} (score: {:.3})",
             idx + 1,
             hit.title,
             hit.scope,
             hit.fact_type,
+            status_badge,
             hit.score
         );
         println!("   ID: {}", hit.id);
+        if let Some(ref sup) = hit.supersedes {
+            println!("   Supersedes: {}", sup);
+        }
         if !hit.tags.is_empty() {
             println!("   Tags: {}", hit.tags.join(", "));
         }
@@ -136,6 +163,7 @@ mod tests {
             "global",
             "--type",
             "decision",
+            "--include-deprecated",
             "--limit",
             "5",
         ])?;
@@ -144,6 +172,7 @@ mod tests {
         assert_eq!(cli.args.mode, "semantic");
         assert_eq!(cli.args.scope, Some("global".to_string()));
         assert_eq!(cli.args.fact_type, Some("decision".to_string()));
+        assert!(cli.args.include_deprecated);
         assert_eq!(cli.args.limit, 5);
         assert!(!cli.args.reindex);
         assert!(!cli.args.vectorize);

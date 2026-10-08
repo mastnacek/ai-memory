@@ -3,13 +3,20 @@ id: 01M4D9S7W1ZMFC4X1X1A5Y7KG8
 scope: "project:ai-memory"
 type: decision
 title: Centralized Single SQLite FTS5 Index in User Profile
-since: "2026-10-08T08:23:54.497882400+00:00"
 tags:
   - sqlite
   - fts5
   - indexing
   - architecture
   - storage
+status: stable
+generated:
+  by: pi-agent/1.1
+  at: "2026-10-08T08:23:54.497882400+00:00"
+verified:
+  - by: "human:operator"
+    at: "2026-10-08T08:23:54.497882400+00:00"
+since: "2026-10-08T08:23:54.497882400+00:00"
 ---
 ### Context
 Initially, each project repository stored its own local SQLite `index.db` inside `.uma/`. This caused repository clutter (binary database in git worktrees), required complex cross-database merging logic, and made cross-project knowledge retrieval inefficient.

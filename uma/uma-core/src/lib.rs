@@ -138,7 +138,18 @@ mod tests {
         indexer.index_fact(&fact1, None)?;
         indexer.index_fact(&fact2, None)?;
 
-        let hits = indexer.search_keyword("FTS5", None, None, None, 10)?;
+        let hits = crate::search::search_keyword(
+            indexer.connection(),
+            &crate::search::SearchOptions {
+                query: "FTS5",
+                scope: None,
+                current_project: None,
+                fact_type: None,
+                include_deprecated: false,
+                as_of: None,
+                limit: 10,
+            },
+        )?;
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].id, fact1.id);
         assert_eq!(hits[0].title, "Adopt SQLite for FTS5 Indexing");

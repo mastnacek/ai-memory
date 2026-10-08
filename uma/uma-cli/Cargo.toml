@@ -8,3 +8,5 @@ license.workspace = true
 uma-core = { path = "../uma-core" }
 clap.workspace = true
 anyhow.workspace = true
+chrono.workspace = true
+walkdir.workspace = true

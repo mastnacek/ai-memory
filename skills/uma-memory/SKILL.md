@@ -86,6 +86,41 @@ Retrieve the full body and metadata of a specific fact:
 }
 ```
 
+### `uma_supersede`
+Replace a fact with a revised revision. The predecessor is kept (never deleted) as `status: deprecated` with an `until` timestamp, and the new fact chains back to it via `supersedes`:
+```json
+{
+  "oldId": "01M4D6K8J6QGDFC0Y11FW45R87",
+  "title": "Use TOML for config storage",
+  "description": "Config persistence format (revised)",
+  "body": "We switched from JSON to TOML for config."
+}
+```
+
+---
+
+## 5. OKF v0.2 Frontmatter
+
+UMA facts are valid **Open Knowledge Format v0.2** documents (Markdown + YAML frontmatter),
+extended with UMA-specific keys. Alignment:
+
+| Key | Source | Meaning |
+| :--- | :--- | :--- |
+| `type` | OKF | Concept type (`decision`, `preference`, `pattern`, ...) |
+| `title` | OKF | Human-readable name |
+| `description` | OKF | One-line summary used for previews/snippets |
+| `tags` | OKF | Cross-cutting categorization |
+| `status` | OKF | `stable` (default) \| `deprecated` \| `draft` |
+| `generated` | OKF | `{ by: pi-agent/1.1, at: <iso8601> }` — who produced it |
+| `verified` | OKF | `[{ by: human:operator, at: <iso8601> }]` — derived trust tier |
+| `since` / `until` / `stale_after` | OKF lifecycle | Validity window and staleness instant |
+| `id` | UMA | ULID identifier |
+| `scope` | UMA | `global` or `project:<name>` |
+| `supersedes` | UMA | ULID of the replaced predecessor fact |
+
+Trust tier is derived from `verified`: no `verified` → unverified; only non-`human:` actors
+→ machine-confirmed; a `human:<id>` actor → human-reviewed.
+
 ---
 
 ## 4. CLI Reference
@@ -98,6 +133,22 @@ uma search "error handling conventions" --mode semantic
 
 # Vectorize all missing embeddings
 uma search --vectorize
+
+# Supersede a fact with a revised revision (old kept as deprecated)
+uma supersede <old-id> --title "New revision" --desc "One-line summary" --body "..."
+
+# Time-travel: what was true on a given date
+uma search "config storage" --as-of "2026-01-15T00:00:00Z"
+
+# Include superseded history (shows [DEPRECATED])
+uma search "config storage" --include-deprecated
+
+# Rewrite legacy markdown files into the OKF v0.2 layout
+uma migrate --dry-run
+uma migrate --reindex
+
+# Rebuild the FTS index after a schema change
+uma search "anything" --reindex
 
 # Store project decision
 uma write --type decision --title "Use SQLite for BM25 Index" --body "Store FTS5 index in user profile." --tags search,sqlite

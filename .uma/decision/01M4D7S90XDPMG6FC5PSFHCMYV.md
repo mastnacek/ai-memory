@@ -3,13 +3,20 @@ id: 01M4D7S90XDPMG6FC5PSFHCMYV
 scope: "project:ai-memory"
 type: decision
 title: Core Engine in Rust with Multi-Client Delivery
-since: "2026-10-08T07:48:58.525562400+00:00"
 tags:
   - tech-stack
   - rust
   - cli
   - mcp
   - pi-extension
+status: stable
+generated:
+  by: pi-agent/1.1
+  at: "2026-10-08T07:48:58.525562400+00:00"
+verified:
+  - by: "human:operator"
+    at: "2026-10-08T07:48:58.525562400+00:00"
+since: "2026-10-08T07:48:58.525562400+00:00"
 ---
 ### Context
 We need a high-performance, local-first memory system that works seamlessly across multiple AI coding agents and harnesses (Pi, Claude Code, Cursor, OpenCode, Codex, and terminal CLI).

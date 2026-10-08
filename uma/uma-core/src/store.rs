@@ -1,9 +1,12 @@
-use crate::domain::{Fact, FactId, FactType, Scope};
+use crate::domain::{Fact, FactId, FactStatus, FactType, Scope};
 use crate::embeddings::EmbeddingClient;
 use crate::indexer::Indexer;
-use crate::search::{search_hybrid, search_semantic, SearchHit, SearchMode};
+use crate::search::{
+    search_hybrid, search_keyword, search_semantic, SearchHit, SearchMode, SearchOptions,
+};
 use crate::serialization::{fact_to_markdown, markdown_to_fact};
 use anyhow::{Context, Result};
+use chrono::{DateTime, Utc};
 use directories::ProjectDirs;
 use std::path::PathBuf;
 use walkdir::WalkDir;
@@ -94,6 +97,28 @@ impl Store {
         Ok(())
     }
 
+    /// Supersedes an existing fact with a new one: marks old as deprecated and chains supersedes.
+    pub fn supersede(&self, old_id: &FactId, mut new_fact: Fact) -> Result<Fact> {
+        let mut old_fact = Self::find_by_id(old_id)?;
+        let now = Utc::now();
+
+        old_fact.status = FactStatus::Deprecated;
+        old_fact.validity.until = Some(now);
+
+        let old_store = match &old_fact.scope {
+            Scope::Global => Self::global()?,
+            Scope::Project(p) => Self::project(p.clone())?,
+        };
+        old_store.write(&old_fact)?;
+
+        new_fact.supersedes = Some(*old_id);
+        new_fact.validity.since = now;
+        new_fact.status = FactStatus::Stable;
+
+        self.write(&new_fact)?;
+        Ok(new_fact)
+    }
+
     /// Reads a fact from its Markdown file.
     pub fn read(&self, scope: &Scope, fact_type: &FactType, id: &FactId) -> Result<Fact> {
         let path = self.fact_path(scope, fact_type, id);
@@ -136,6 +161,8 @@ impl Store {
         scope: Option<&Scope>,
         fact_type: Option<&FactType>,
         mode: SearchMode,
+        include_deprecated: bool,
+        as_of: Option<DateTime<Utc>>,
         limit: usize,
     ) -> Result<Vec<SearchHit>> {
         let indexer = Self::central_indexer()?;
@@ -144,60 +171,36 @@ impl Store {
             None => Self::current_project_name(),
         };
 
+        let opts = SearchOptions {
+            query,
+            scope,
+            current_project: current_project.as_deref(),
+            fact_type,
+            include_deprecated,
+            as_of,
+            limit,
+        };
+
         match mode {
             SearchMode::Keyword => {
-                let hits = indexer.search_keyword(
-                    query,
-                    scope,
-                    current_project.as_deref(),
-                    fact_type,
-                    limit,
-                )?;
+                let hits = search_keyword(indexer.connection(), &opts)?;
                 if hits.is_empty() {
                     let indexed = Self::reindex_all()?;
                     if indexed > 0 {
-                        return indexer.search_keyword(
-                            query,
-                            scope,
-                            current_project.as_deref(),
-                            fact_type,
-                            limit,
-                        );
+                        return search_keyword(indexer.connection(), &opts);
                     }
                 }
                 Ok(hits)
             }
             SearchMode::Semantic => {
                 let client = EmbeddingClient::new(None)?;
-                search_semantic(
-                    indexer.connection(),
-                    query,
-                    scope,
-                    current_project.as_deref(),
-                    fact_type,
-                    limit,
-                    &client,
-                )
+                search_semantic(indexer.connection(), &opts, &client)
             }
             SearchMode::Hybrid => {
                 if let Ok(client) = EmbeddingClient::new(None) {
-                    search_hybrid(
-                        &indexer,
-                        query,
-                        scope,
-                        current_project.as_deref(),
-                        fact_type,
-                        limit,
-                        &client,
-                    )
+                    search_hybrid(indexer.connection(), &opts, &client)
                 } else {
-                    indexer.search_keyword(
-                        query,
-                        scope,
-                        current_project.as_deref(),
-                        fact_type,
-                        limit,
-                    )
+                    search_keyword(indexer.connection(), &opts)
                 }
             }
         }

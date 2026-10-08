@@ -16,6 +16,10 @@ pub struct WriteArgs {
     #[arg(short = 'T', long = "title")]
     pub title: String,
 
+    /// Optional one-line description (OKF format)
+    #[arg(short = 'd', long = "desc")]
+    pub description: Option<String>,
+
     /// Fact body (if not provided, reads from stdin)
     #[arg(short = 'b', long = "body")]
     pub body: Option<String>,
@@ -43,6 +47,7 @@ pub fn run(args: WriteArgs) -> Result<()> {
 
     let scope = resolve_scope(args.scope)?;
     let mut fact = Fact::new(scope, fact_type, args.title, body);
+    fact.description = args.description;
     fact.tags = args.tags;
 
     let store = get_store(&fact.scope)?;

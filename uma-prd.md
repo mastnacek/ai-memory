@@ -19,17 +19,16 @@
 Each slice = **one user-visible capability** + its data, tools, storage, tests. No horizontal layers.
 
 | Slice | Capability | User Value | Depends On |
-|-------|------------|------------|------------|
-| **S0** | Core store + `uma_write` / `uma_read` | Persist one fact, read it back | — |
-| **S1** | `uma_search` (keyword BM25) | Find facts by term | S0 |
-| **S2** | `uma_search` (semantic vectors) | Find by meaning | S1 |
-| **S3** | Scopes: project / global | Separate repo facts from user prefs | S0 |
-| **S4** | Fact types + frontmatter schema | Structured decisions, prefs, skills | S0 |
-| **S5** | Temporal validity + supersession | "What was true on 2026-01-15?" | S4 |
-| **S6** | Consolidation proposer (agent-reviewed) | Merge dupes, fix contradictions | S4, S5 |
-| **S7** | Skill memory (procedural) | Reusable how-to with invocation template | S4 |
-| **S8** | MCP server (stdio) | Claude Code, Cursor, OpenCode read/write same store | S1, S3 |
-| **S9** | Cross-machine sync (git/rsync) | Portable memory | S3 |
+| :--- | :--- | :--- | :--- |
+| **S0** | Core store + `uma_write` / `uma_read` | Persist one fact, read it back | — (Completed) |
+| **S1** | `uma_search` (keyword BM25) | Find facts by term | S0 (Completed) |
+| **S2** | `uma_search` (semantic vectors) | Find by meaning | S1 (Completed) |
+| **S3** | Auto-Recall & Context Injection | Auto-inject relevant facts into turn | S2 (On Hold / `[?]`) |
+| **S4** | Temporal validity + Supersession | "What was true on 2026-01-15?", replace facts | S0, S1, S2 |
+| **S5** | Consolidation proposer (agent-reviewed) | Merge dupes, fix contradictions | S4 |
+| **S6** | Skill memory (procedural) | Reusable how-to with invocation template | S4 |
+| **S7** | MCP server (stdio) | Claude Code, Cursor, OpenCode read/write same store | S1, S2 |
+| **S8** | Cross-machine sync (git/rsync) | Portable memory | S0 |
 
 **Vertical-slice rule**: Each slice ships a working `uma` CLI command + Pi tool(s) + tests. No "infrastructure slice".
 
@@ -133,17 +132,19 @@ They share the **same `uma` binary and store**. No duplication.
 - [x] Batch vectorization (`uma search --vectorize`)
 - [x] **Test**: verified semantic search & hybrid RRF scoring on real facts via OpenRouter API
 
-### **Week 4: S3 — Scopes + Fact Types**
-- [ ] Frontmatter schema validation on write
-- [ ] `uma write --scope global --type preference ...`
-- [ ] Pi tool `uma_recall` injects top 3 global + 5 project facts per turn (configurable)
-- [ ] **Test**: global preference recalled in different repo
+### **Week 4: S3 — Auto-Recall & Context Injection [?]**
+- [?] *ON HOLD (Operator preference)*: Auto-injecting facts into turns is paused to prevent context noise and hallucinations. On-demand search via `uma_search` is prioritized.
 
-### **Week 5: S4 — Temporal Validity + Supersession**
-- [ ] `valid_from`, `invalid_at` in frontmatter
-- [ ] `uma supersede <old-id> --title "..." --body "..."` → chains `Supersedes`
-- [ ] `uma search --as-of "2026-01-01"` filters by validity
-- [ ] **Test**: supersede chain queryable, old version not in default search
+### **Week 5: S4 — Temporal Validity, OKF Lifecycle & Supersession** ✅
+- [x] Align YAML frontmatter with OKF v0.2 specification (`type`, `title`, `description`, `tags`, `status`, `generated`, `verified`)
+- [x] `since` (valid_from), `until` (invalid_at), and `stale_after` in frontmatter
+- [x] `uma supersede <old-id> --title "..." --body "..."` → sets old fact `status: deprecated`, sets `until`, and chains `supersedes: <old_id>`
+- [x] `uma search --as-of "2026-01-01T00:00:00Z"` filters by validity and hides deprecated facts from default search
+- [x] `uma search --include-deprecated` surfaces superseded history with a `[DEPRECATED]` badge
+- [x] `uma migrate [--dry-run] [--reindex]` rewrites legacy markdown files into the OKF v0.2 layout and backfills `generated`/`verified`
+- [x] Pi tool `uma_supersede` + `uma_search` gained `includeDeprecated` and `asOf`
+- [x] FTS5 schema versioning: an old `index.db` is auto-rebuilt (the index is a rebuildable cache)
+- [x] **Test**: supersede chain queryable, deprecated version hidden by default, precise `--as-of` time-travel verified end-to-end
 
 ### **Week 6: S5 — Consolidation Proposer**
 - [ ] `uma consolidate --scope project --dry-run` → prints proposed merges (same title/tags, similar body), contradiction flags (opposite decisions)
