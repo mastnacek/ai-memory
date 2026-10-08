@@ -76,7 +76,7 @@ Capabilities that were not in the roadmap but are implemented, tested and in use
 
 | Item | Slice | Blocked by |
 | :--- | :--- | :--- |
-| Import from prior memory systems (§9) | **unlisted** | **Speculative.** Checked 2026-10-08: none of the four source stores exist on this machine (`~/.pi/agent/memory`, `.memsearch/memory`, `~/.engram/vault`, `~/.pi/agent/pi-hermes-memory`), and their formats would have to be reverse-engineered. Revisit only when a real migration is actually needed. |
+| Import from old sessions (§9) | **unlisted** | **Real source confirmed by the 2026-10-08 spike** — the four named memory systems do not exist here, but the agent session stores do: 578 sessions / 4.5 months / 124 projects, **122 from projects deleted from disk** (sampled: real decisions and troubleshooting, Czech substance, 0 secret-pattern hits). Design: proposal-only extraction through the approval modal, dead-project sessions first. |
 | Local embedding fallback | S9 | Question 2 |
 | Auto-recall / context injection | S3 | On hold by operator preference (deliberate) |
 | Consolidator is blind across scopes | S5 | Found by dogfooding: `consolidate` analyses one scope per run, so near-duplicates spanning project/global (e.g. the three-fact VSA cluster) are invisible to it. Not a contradiction, so nothing to fix urgently; a `--scope all` cross-scope mode is the obvious future extension. |
@@ -259,7 +259,7 @@ A mutation attempted without `--allow-writes` is refused server-side, not merely
 
 > Note: this section previously duplicated S8 verbatim. It now lists the genuinely remaining advanced work.
 
-- [ ] **Import slice** (see §9): `uma import pi-memory | memorix | engram | hermes`, preserving `created_at` and creating supersession chains for conflicts. This was described in prose but **never added to the roadmap table**, so it has no slice number.
+- [ ] **Import slice** — now the session stores, not the four systems below (see §9 for the spike evidence): `uma import sessions --source <pi|claude store>`. Agent-driven extraction of decision/correction/preference candidates from substantive user/assistant text (Czech → English), proposed through the approval modal in batches, with scope/since/provenance from the session itself. **Dead-project sessions (122) are the first target**: their projects are gone from disk, so the sessions are the only surviving record.
 - [ ] Local embedding fallback so semantic search survives an OpenRouter outage (question 2)
 - [ ] Revisit auto-recall / context injection (S3) once the on-demand path has proven itself
 - [ ] `/uma status` and the Pi panel (question 5)
@@ -387,6 +387,54 @@ uma-pi-extension/
 ---
 
 ## 9. Migration Path (for you)
+
+**Reversed verdict, from the 2026-10-08 reconnaissance spike.** The four source systems below were
+checked that day and **none exist on this machine** — so the import slice was marked speculative and
+skipped. That scoping was wrong: the real source was never another memory system, it is the agent
+session stores, which were never on the list.
+
+### The real source: agent sessions
+
+Read-only spike over both stores (no writes, secret patterns masked):
+
+| | pi agent | Claude Code | Total |
+| :--- | :--- | :--- | :--- |
+| Sessions | 527 (471 MB) | 51 (68 MB) | **578** |
+| Projects | 98 | 26 | 124 |
+| **Sessions from dead projects** | **109** | **13** | **122** |
+| Span | May 18 → Oct 8 | Aug 11 → Sep 15 | 4.5 months |
+
+Why this matters: sessions live in the **profile**, not the projects, so they outlive deletion. Four
+sampled dead projects (`mozek_rust` — deleted from disk but with 19 sessions across two machines,
+including a WSL twin; `/home/jara`; `skoly`; `hra`) yielded sessions with 19–58 substantive user
+messages each: design direction, resolved troubleshooting, first-use records. Sampled dead-project
+sessions contained **0 secret-pattern hits**.
+
+Two properties shape the design:
+
+1. **Substance is largely Czech**; UMA facts are English. Extraction is an *understanding* task, not
+   a regex one — agent-driven, with translation, never bulk regex ingestion.
+2. **The signal is the conversation, not the bulk.** A large session is 77 events (10 user / 41
+   assistant / 26 tool results); most volume is code dumps and command output, exactly what the
+   "what NOT to store" rules exclude. The extractor selects user/assistant *text* only.
+
+### Proposed shape: `uma import sessions`
+
+- Walks both stores; per-session, extracts decision / correction / preference *candidates* from
+  substantive user/assistant text (Czech → English), agent-driven rather than regex.
+- **Proposal-only, like the consolidator**: candidates are proposed through the approval modal in
+  batches — bulk import must never write directly, because old sessions can contain secrets.
+- Provenance recorded from the session itself: project cwd → scope, session timestamp → `since`,
+  session file → provenance link. `--as-of` and `stale_after` matter here more than anywhere:
+  a decision from a project since deleted may well be obsolete.
+
+| From | Command |
+|------|---------|
+| pi agent sessions | `uma import sessions --source ~/.pi/agent/sessions` |
+| Claude Code sessions | `uma import sessions --source ~/.claude/projects` |
+
+The four original rows are retained for completeness, but remain speculative: none of these systems
+exists here.
 
 | From | Command |
 |------|---------|
