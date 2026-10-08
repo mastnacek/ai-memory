@@ -15,11 +15,14 @@ export interface RecallVerdict {
   note: string | null;
 }
 
+/** The CLI serializes the Scope enum in serde's default external form. */
+export type ScopeWire = { Project: string } | "Global";
+
 export interface RecallFact {
   id: string;
   title: string;
   fact_type: string;
-  scope: string;
+  scope: ScopeWire;
   score: number;
   snippet: string;
   tags: string[];
@@ -33,6 +36,13 @@ export interface RecallMessage {
   details: { judge: string; count: number };
 }
 
+/** Renders the scope for display: "Global" becomes "global", the tagged
+ * variant becomes "project:<name>" — interpolating the raw object was the
+ * [object Object] seen in the first live recall injection. */
+export function formatScope(scope: ScopeWire): string {
+  return typeof scope === "string" ? "global" : `project:${scope.Project}`;
+}
+
 /**
  * Pure decision: what should the hook do with a verdict?
  * No trigger or no facts → nothing is injected.
@@ -43,7 +53,8 @@ export function buildRecallMessage(
 ): { message: RecallMessage } | undefined {
   if (!verdict.search || verdict.facts.length === 0) return undefined;
   const lines = verdict.facts.map(
-    (fact) => `- [${fact.fact_type}] ${fact.title} (${fact.scope}): ${fact.snippet}`,
+    (fact) =>
+      `- [${fact.fact_type}] ${fact.title} (${formatScope(fact.scope)}): ${fact.snippet}`,
   );
   const header =
     lang === "cs"
