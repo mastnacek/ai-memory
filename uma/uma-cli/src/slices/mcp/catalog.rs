@@ -116,7 +116,8 @@ fn mutating_specs() -> Vec<ToolSpec> {
                     "type": { "type": "string", "description": "Default: note." },
                     "scope": { "type": "string" },
                     "tags": { "type": "array", "items": { "type": "string" } },
-                    "template": { "type": "string", "description": "For type 'skill': an invocation template with {{placeholders}}." }
+                    "template": { "type": "string", "description": "For type 'skill': an invocation template with {{placeholders}}." },
+                    "staleAfter": { "type": "string", "description": "When the claim needs re-verification (ISO 8601 or a bare date)." }
                 },
                 "required": ["title", "body"]
             }),
@@ -135,7 +136,8 @@ fn mutating_specs() -> Vec<ToolSpec> {
                     "type": { "type": "string", "description": "Defaults to the predecessor's type." },
                     "scope": { "type": "string", "description": "Defaults to the predecessor's scope." },
                     "tags": { "type": "array", "items": { "type": "string" } },
-                    "description": { "type": "string" }
+                    "description": { "type": "string" },
+                    "staleAfter": { "type": "string", "description": "When the claim needs re-verification; defaults to the predecessor's. ISO 8601 or a bare date." }
                 },
                 "required": ["oldId", "title", "body"]
             }),

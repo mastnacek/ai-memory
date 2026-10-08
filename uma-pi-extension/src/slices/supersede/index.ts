@@ -32,6 +32,12 @@ export function registerSupersedeTool(pi: ExtensionAPI, state: ExtensionState): 
             "Invocation template for 'skill' facts; defaults to the predecessor's template. Placeholders use {{name}} and are never executed.",
         })
       ),
+      staleAfter: Type.Optional(
+        Type.String({
+          description:
+            "When the claim needs re-verification; defaults to the predecessor's stale_after. ISO 8601 timestamp or a bare date.",
+        })
+      ),
     }),
     execute: async (_toolCallId, params, _signal, _onUpdate, ctx) => {
       // Resolve the predecessor so the modal shows its real type/scope/tags and
@@ -48,6 +54,7 @@ export function registerSupersedeTool(pi: ExtensionAPI, state: ExtensionState): 
         // Carried into the proposal so the reviewer SEES the template being set
         // or replaced. Omitted means the CLI inherits the predecessor's.
         template: params.template,
+        stale_after: params.staleAfter,
       };
 
       // Same approval contract as uma_write: review the revision before it is stored.
@@ -70,6 +77,7 @@ export function registerSupersedeTool(pi: ExtensionAPI, state: ExtensionState): 
       // Use the approved value, never the raw parameter: if the modal ever gains
       // template editing, the reviewed value must be the one that is stored.
       if (approved.template) args.push("--template", approved.template);
+      if (approved.stale_after) args.push("--stale-after", approved.stale_after);
       if (approved.type) args.push("--type", approved.type);
       if (approved.scope) args.push("--scope", approved.scope);
       if (approved.tags.length > 0) args.push("--tags", approved.tags.join(","));

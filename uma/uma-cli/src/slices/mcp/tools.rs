@@ -10,6 +10,7 @@ use uma_core::search::SearchMode;
 use uma_core::store::Store;
 
 use crate::shared::format::{render_fact, render_fact_summary, status_suffix};
+use crate::shared::parse::parse_datetime_or_date;
 use crate::shared::scope::resolve_scope;
 use crate::shared::store_helper::get_store;
 
@@ -225,6 +226,10 @@ fn write(args: &Value) -> Result<String, String> {
     fact.tags = tags_arg(args);
     fact.description = str_arg(args, "description");
     fact.template = str_arg(args, "template");
+    if let Some(raw) = str_arg(args, "staleAfter") {
+        fact.validity.stale_after =
+            Some(parse_datetime_or_date(&raw).map_err(|err| err.to_string())?);
+    }
 
     store.write(&fact).map_err(|err| err.to_string())?;
     Ok(format!("Created fact: {}", fact.id))
@@ -256,6 +261,10 @@ fn supersede(args: &Value) -> Result<String, String> {
         tags
     };
     fact.description = str_arg(args, "description");
+    fact.validity.stale_after = match str_arg(args, "staleAfter") {
+        Some(raw) => Some(parse_datetime_or_date(&raw).map_err(|err| err.to_string())?),
+        None => predecessor.validity.stale_after,
+    };
 
     let stored = store
         .supersede(&old_id, fact)

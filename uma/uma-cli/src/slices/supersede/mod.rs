@@ -7,7 +7,7 @@ use uma_core::{
     store::Store,
 };
 
-use crate::shared::{scope::resolve_scope, store_helper::get_store};
+use crate::shared::{parse::parse_datetime_or_date, scope::resolve_scope, store_helper::get_store};
 
 #[derive(Args, Debug, Clone)]
 pub struct SupersedeArgs {
@@ -43,6 +43,13 @@ pub struct SupersedeArgs {
     /// template and the skill would stop being expandable.
     #[arg(long = "template")]
     pub template: Option<String>,
+
+    /// When the claim stops being trusted without re-verification.
+    /// Defaults to the predecessor's `stale_after` (RFC 3339 or a bare date).
+    /// Pass an extended date to re-verify the fact, or note that inheriting a
+    /// date that has already passed would make the revision stale at birth.
+    #[arg(long = "stale-after", value_name = "WHEN")]
+    pub stale_after: Option<String>,
 }
 
 /// Executes the Supersede vertical slice: chains supersession and invalidates previous fact.
@@ -81,6 +88,12 @@ pub fn run(args: SupersedeArgs) -> Result<()> {
     // Inherit like type/scope/tags: a revision must never silently drop the
     // invocation template, or the skill would stop being invokable.
     new_fact.template = args.template.or_else(|| old_fact.template.clone());
+    // Same for the validity deadline — but a re-verification SHOULD pass a new
+    // one, or the revision inherits a date that may already have passed.
+    new_fact.validity.stale_after = match args.stale_after {
+        Some(raw) => Some(parse_datetime_or_date(&raw)?),
+        None => old_fact.validity.stale_after,
+    };
 
     let store = get_store(&scope)?;
     let created = store.supersede(&old_id, new_fact)?;

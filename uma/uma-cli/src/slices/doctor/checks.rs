@@ -6,6 +6,8 @@
 
 use std::path::Path;
 
+use chrono::{DateTime, Utc};
+use uma_core::domain::{Fact, FactStatus};
 use uma_core::health::{inspect, IndexHealth};
 
 use super::findings::{fail, ok, warn, Finding};
@@ -39,6 +41,25 @@ pub fn count_fact_files(root: Option<&Path>) -> usize {
         .flatten()
         .filter(|entry| {
             entry.file_type().is_file() && entry.path().extension().is_some_and(|x| x == "md")
+        })
+        .count()
+}
+
+/// Counts facts that are stable-status but past their `stale_after` date.
+///
+/// Pure, so it is testable without a store or an index. A stale fact is not
+/// deprecated — it is a claim whose validity window has closed and which now
+/// needs re-verification.
+pub fn count_stale_facts(facts: &[Fact], now: DateTime<Utc>) -> usize {
+    facts
+        .iter()
+        .filter(|fact| {
+            fact.status == FactStatus::Stable
+                && fact
+                    .validity
+                    .stale_after
+                    .map(|deadline| deadline <= now)
+                    .unwrap_or(false)
         })
         .count()
 }
@@ -132,6 +153,42 @@ fn orphan_finding(orphans: usize) -> Finding {
             format!("{orphans} vector(s) reference facts that are no longer indexed"),
             "Pruned automatically by the next `uma search \"\" --reindex`.",
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::Duration;
+    use uma_core::domain::{FactType, Scope};
+
+    fn fact() -> Fact {
+        Fact::new(
+            Scope::Global,
+            FactType::Note,
+            "title".to_string(),
+            "body".to_string(),
+        )
+    }
+
+    #[test]
+    fn test_count_stale_facts_only_counts_stable_facts_past_their_deadline() {
+        let mut fresh = fact();
+        fresh.validity.stale_after = Some(Utc::now() + Duration::days(1));
+
+        let mut stale = fact();
+        stale.validity.stale_after = Some(Utc::now() - Duration::days(1));
+
+        let mut deprecated_and_stale = fact();
+        deprecated_and_stale.status = FactStatus::Deprecated;
+        deprecated_and_stale.validity.stale_after = Some(Utc::now() - Duration::days(1));
+
+        let facts = vec![fresh, stale, deprecated_and_stale, fact()];
+        assert_eq!(
+            count_stale_facts(&facts, Utc::now()),
+            1,
+            "only the stable fact past its deadline counts"
+        );
     }
 }
 

@@ -2,11 +2,13 @@ mod checks;
 mod findings;
 
 use anyhow::{bail, Result};
+use chrono::Utc;
 use clap::Args;
 use serde_json::json;
+use uma_core::domain::Scope;
 use uma_core::store::Store;
 
-use checks::{count_fact_files, inspect_index, root_finding};
+use checks::{count_fact_files, count_stale_facts, inspect_index, root_finding};
 use findings::{fail, ok, warn, Finding, Level};
 
 #[derive(Args, Debug, Clone)]
@@ -56,6 +58,31 @@ pub fn run(args: DoctorArgs) -> Result<()> {
         "fact files",
         format!("{disk_facts} Markdown document(s) across both scopes"),
     ));
+
+    // Staleness is a store-level concern, not an index one: a fact past its
+    // stale_after date needs re-verification whether or not it is indexed.
+    let now = Utc::now();
+    let mut stale_facts = 0usize;
+    for root in [project_root.as_deref(), global_root.as_deref()]
+        .into_iter()
+        .flatten()
+    {
+        if root.exists() {
+            let store = Store::new(root.to_path_buf());
+            if let Ok(facts) = store.list(&Scope::Global, None) {
+                stale_facts += count_stale_facts(&facts, now);
+            }
+        }
+    }
+    if stale_facts == 0 {
+        findings.push(ok("staleness", "no facts are past their stale_after date"));
+    } else {
+        findings.push(warn(
+            "staleness",
+            format!("{stale_facts} fact(s) are past their stale_after date and unverified"),
+            "Review them: `uma list --include-deprecated` flags them [STALE]; extend with `uma supersede --stale-after`.",
+        ));
+    }
 
     let db_path = Store::central_db_path()?;
     if db_path.exists() {

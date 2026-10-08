@@ -33,6 +33,12 @@ export function registerWriteTool(pi: ExtensionAPI, state: ExtensionState): void
             "Only for type 'skill': an invocation template with {{placeholders}}, e.g. \"docker build -t {{tag}} .\". Stored as data and never executed.",
         })
       ),
+      staleAfter: Type.Optional(
+        Type.String({
+          description:
+            "When the claim stops being trusted without re-verification. ISO 8601 timestamp or a bare date (2026-12-31).",
+        })
+      ),
     }),
     execute: async (_toolCallId, params, _signal, _onUpdate, ctx) => {
       const initialProposal: MemoryProposal = {
@@ -42,6 +48,7 @@ export function registerWriteTool(pi: ExtensionAPI, state: ExtensionState): void
         scope: params.scope || "project",
         tags: params.tags || [],
         template: params.template,
+        stale_after: params.staleAfter,
       };
 
       // In interactive TUI mode (and when autoApprove is false), show the modal proposal window
@@ -69,6 +76,9 @@ export function registerWriteTool(pi: ExtensionAPI, state: ExtensionState): void
       }
       if (approvedProposal.template) {
         args.push("--template", approvedProposal.template);
+      }
+      if (approvedProposal.stale_after) {
+        args.push("--stale-after", approvedProposal.stale_after);
       }
 
       return executeUma(ctx.cwd, args);

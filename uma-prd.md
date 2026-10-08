@@ -64,15 +64,15 @@ Capabilities that were not in the roadmap but are implemented, tested and in use
 | `doctor` opens the index read-only | `Indexer::open` drops and recreates `facts_fts` on a schema mismatch, so a diagnosis would have silently repaired what it was measuring. |
 | Hybrid degradation is now visible | `Store::search_all` fell back to keyword-only **invisibly** — the caller believed it got hybrid ranking and did not. Worse, a failing embedding *call* (network/quota/bad key) failed the whole search with no results even though BM25 works. Degradation is now part of the return value (`SearchOutcome`), so it cannot be dropped on the way to the user. |
 | `search.rs` split into a folder | It was 394 lines, six below the 400 hard limit — the next search change would have been refused. Now `search/{mod,keyword,semantic,fusion,outcome}.rs`, all under the soft target. |
+| `stale_after` is now settable and visible | It was parsed, stored and honoured by `is_active_at`, but **no CLI slice could set it** — an unreachable field, i.e. a lie in the data model. Now: `uma write/supersede --stale-after` (bare dates accepted), a `[STALE]` badge distinct from `[DEPRECATED]`, and a `doctor` staleness check that names the remedy. Verified end-to-end, including MCP inheritance. |
 
-**Current tally**: 85 Rust tests (39 CLI + 42 core + 4 integration) and 7 TypeScript tests, 0 warnings in both debug and release builds.
+**Current tally**: 91 Rust tests (45 CLI + 42 core + 4 integration) and 7 TypeScript tests, 0 warnings in both debug and release builds.
 
 ### Outstanding work (as of 2026-10-08)
 
 | Item | Slice | Blocked by |
 | :--- | :--- | :--- |
 | `uma sync push/pull` (the polish commands are done) | S8 | Question 4 (git vs rsync) |
-| **`stale_after` is unreachable** | — | Parsed, stored, and honoured by `is_active_at`, but **no CLI slice can ever set it**. Either wire it up (`uma write --stale-after`, surface stale facts) or remove it — an unreachable field is a lie in the data model. |
 | Import from prior memory systems (§9) | **unlisted** | **Speculative.** Checked 2026-10-08: none of the four source stores exist on this machine (`~/.pi/agent/memory`, `.memsearch/memory`, `~/.engram/vault`, `~/.pi/agent/pi-hermes-memory`), and their formats would have to be reverse-engineered. Revisit only when a real migration is actually needed. |
 | Local embedding fallback | S9 | Question 2 |
 | Auto-recall / context injection | S3 | On hold by operator preference (deliberate) |

@@ -8,6 +8,8 @@ export interface MemoryProposal {
   supersedes?: string;
   /** Invocation template for `skill` facts. Displayed for review; never executed. */
   template?: string;
+  /** ISO 8601 date/timestamp after which the claim needs re-verification. */
+  stale_after?: string;
 }
 
 export interface ProposalResult {

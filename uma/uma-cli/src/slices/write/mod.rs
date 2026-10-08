@@ -4,7 +4,7 @@ use std::io::{self, Read};
 use std::str::FromStr;
 use uma_core::domain::{Fact, FactType};
 
-use crate::shared::{scope::resolve_scope, store_helper::get_store};
+use crate::shared::{parse::parse_datetime_or_date, scope::resolve_scope, store_helper::get_store};
 
 #[derive(Args, Debug, Clone)]
 pub struct WriteArgs {
@@ -36,6 +36,11 @@ pub struct WriteArgs {
     /// Stored as data only — UMA expands it elsewhere and never executes it.
     #[arg(long = "template")]
     pub template: Option<String>,
+
+    /// When this claim stops being trusted without re-verification.
+    /// Accepts RFC 3339 (2026-12-31T23:59:59Z) or a bare date (2026-12-31).
+    #[arg(long = "stale-after", value_name = "WHEN")]
+    pub stale_after: Option<String>,
 }
 
 /// Executes the Write vertical slice: creates and stores a new fact.
@@ -55,6 +60,9 @@ pub fn run(args: WriteArgs) -> Result<()> {
     fact.description = args.description;
     fact.tags = args.tags;
     fact.template = args.template;
+    if let Some(raw) = args.stale_after.as_deref() {
+        fact.validity.stale_after = Some(parse_datetime_or_date(raw)?);
+    }
 
     let store = get_store(&fact.scope)?;
     store.write(&fact)?;
