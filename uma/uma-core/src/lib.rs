@@ -5,6 +5,7 @@ pub mod indexer;
 pub mod search;
 pub mod serialization;
 pub mod similarity;
+pub mod skill;
 pub mod store;
 pub mod vector_store;
 

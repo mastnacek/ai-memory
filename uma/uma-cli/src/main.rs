@@ -37,6 +37,9 @@ enum Commands {
 
     /// Propose merges for near-duplicate facts and flag contradicting facts
     Consolidate(slices::consolidate::ConsolidateArgs),
+
+    /// Procedural skill memory: store and expand invocation templates
+    Skill(slices::skill::SkillArgs),
 }
 
 fn main() -> Result<()> {
@@ -50,5 +53,6 @@ fn main() -> Result<()> {
         Commands::Supersede(args) => slices::supersede::run(args),
         Commands::Migrate(args) => slices::migrate::run(args),
         Commands::Consolidate(args) => slices::consolidate::run(args),
+        Commands::Skill(args) => slices::skill::run(args),
     }
 }

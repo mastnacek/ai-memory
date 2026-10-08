@@ -31,6 +31,12 @@ pub fn fact_to_markdown(fact: &Fact) -> Result<String> {
                 Yaml::String(desc.clone()),
             );
         }
+        if let Some(ref template) = fact.template {
+            map.insert(
+                Yaml::String("template".to_string()),
+                Yaml::String(template.clone()),
+            );
+        }
         if !fact.tags.is_empty() {
             map.insert(
                 Yaml::String("tags".to_string()),
@@ -129,6 +135,7 @@ pub fn markdown_to_fact(content: &str) -> Result<Fact> {
         .context("Missing or invalid title")?
         .to_string();
     let description = yaml["description"].as_str().map(String::from);
+    let template = yaml["template"].as_str().map(String::from);
     let status_str = yaml["status"].as_str().unwrap_or("stable");
     let status = FactStatus::from_str(status_str).unwrap_or(FactStatus::Stable);
     let supersedes = yaml["supersedes"]
@@ -216,6 +223,7 @@ pub fn markdown_to_fact(content: &str) -> Result<Fact> {
         fact_type,
         title,
         description,
+        template,
         body: body.to_string(),
         status,
         supersedes,

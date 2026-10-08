@@ -32,6 +32,7 @@ export interface Strings {
   scopeGlobal: string;
   scopeProject: string;
   supersedesLabel: string;
+  templateLabel: string;
 }
 
 const STRINGS: Record<Locale, Strings> = {
@@ -66,6 +67,7 @@ const STRINGS: Record<Locale, Strings> = {
     scopeGlobal: "Global (all projects)",
     scopeProject: "Project",
     supersedesLabel: "Supersedes",
+    templateLabel: "Template (not executed)",
   },
   cs: {
     proposalHeader: "🧠 UMA • Návrh zápisu do paměti",
@@ -98,6 +100,7 @@ const STRINGS: Record<Locale, Strings> = {
     scopeGlobal: "Globální (všechny projekty)",
     scopeProject: "Projekt",
     supersedesLabel: "Nahrazuje",
+    templateLabel: "Šablona (nespouští se)",
   },
 };
 

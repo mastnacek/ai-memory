@@ -7,6 +7,7 @@ import { registerListTool } from "./src/slices/list/index.js";
 import { registerSearchTool } from "./src/slices/search/index.js";
 import { registerSupersedeTool } from "./src/slices/supersede/index.js";
 import { registerConsolidateTool } from "./src/slices/consolidate/index.js";
+import { registerSkillTool } from "./src/slices/skill/index.js";
 import { registerCommands } from "./src/slices/commands/index.js";
 import { evaluateApprovalGate } from "./src/hooks/approval_gate.js";
 
@@ -50,5 +51,6 @@ export default function umaExtension(pi: ExtensionAPI): void {
   registerSearchTool(pi, state);
   registerSupersedeTool(pi, state);
   registerConsolidateTool(pi, state);
+  registerSkillTool(pi, state);
   registerCommands(pi, state);
 }

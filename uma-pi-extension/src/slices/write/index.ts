@@ -27,6 +27,12 @@ export function registerWriteTool(pi: ExtensionAPI, state: ExtensionState): void
           description: "List of tags (e.g. ['architecture', 'vsa', 'rust']).",
         })
       ),
+      template: Type.Optional(
+        Type.String({
+          description:
+            "Only for type 'skill': an invocation template with {{placeholders}}, e.g. \"docker build -t {{tag}} .\". Stored as data and never executed.",
+        })
+      ),
     }),
     execute: async (_toolCallId, params, _signal, _onUpdate, ctx) => {
       const initialProposal: MemoryProposal = {
@@ -35,6 +41,7 @@ export function registerWriteTool(pi: ExtensionAPI, state: ExtensionState): void
         type: params.type || "note",
         scope: params.scope || "project",
         tags: params.tags || [],
+        template: params.template,
       };
 
       // In interactive TUI mode (and when autoApprove is false), show the modal proposal window
@@ -59,6 +66,9 @@ export function registerWriteTool(pi: ExtensionAPI, state: ExtensionState): void
       }
       if (approvedProposal.tags.length > 0) {
         args.push("--tags", approvedProposal.tags.join(","));
+      }
+      if (approvedProposal.template) {
+        args.push("--template", approvedProposal.template);
       }
 
       return executeUma(ctx.cwd, args);

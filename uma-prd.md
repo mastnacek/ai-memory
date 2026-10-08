@@ -26,7 +26,7 @@ Each slice = **one user-visible capability** + its data, tools, storage, tests. 
 | **S3** | Auto-Recall & Context Injection | Auto-inject relevant facts into turn | S2 (On Hold / `[?]`) |
 | **S4** | Temporal validity + Supersession | "What was true on 2026-01-15?", replace facts | S0, S1, S2 (Completed) |
 | **S5** | Consolidation proposer (agent-reviewed) | Merge dupes, fix contradictions | S4 (Completed) |
-| **S6** | Skill memory (procedural) | Reusable how-to with invocation template | S4 |
+| **S6** | Skill memory (procedural) | Reusable how-to with invocation template | S4 (Completed) |
 | **S7** | MCP server (stdio) | Claude Code, Cursor, OpenCode read/write same store | S1, S2 |
 | **S8** | Cross-machine sync (git/rsync) | Portable memory | S0 |
 
@@ -176,11 +176,14 @@ They share the **same `uma` binary and store**. No duplication.
 - [x] Read-only by construction: the slice never writes, so it is deliberately **not** behind the approval gate
 - [x] **Test**: two "use pnpm" facts → proposer merges; "Use pnpm" vs "Do not use pnpm" → contradiction flag; unrelated facts → nothing
 
-### **Week 7: S6 — Skill Memory**
-- [ ] `FactType::Skill` with extra field `InvocationTemplate: string`
-- [ ] `uma skill new --name "docker-build" --template "docker build -t {{tag}} ."`
-- [ ] Pi tool `uma_skill_invoke` expands template + runs
-- [ ] **Test**: skill recalled, template filled, executed
+### **Week 7: S6 — Skill Memory** ✅
+- [x] `FactType::Skill` plus a `template` frontmatter field (OKF extension, like `id`/`scope`/`supersedes`); round-trips through serialization
+- [x] `uma skill new --name "docker-build" --template "docker build -t {{tag}} ."` — also reachable as `uma write -t skill --template ...`
+- [x] `uma skill list` (shows required placeholders) and `uma skill show <name|id>`
+- [x] `uma skill invoke <name|id> --set tag=v1` **expands only** — see question 3 below
+- [x] Pi tool `uma_skill_invoke` returns the expanded command as text; the agent runs it through its own shell tool, so the harness's command approval applies
+- [x] Expansion is pure and lives in `uma-core/src/skill.rs` (7 unit tests); JSON output carries `"executed": false`
+- [x] **Test**: skill stored, recalled by name, template expanded; missing/typo placeholders reported and left visible
 
 ### **Week 8: S7 — MCP Server (stdio)**
 - [ ] `uma mcp serve` → stdio JSON-RPC, registers 5 tools
@@ -336,7 +339,7 @@ Imports preserve `created_at`, map types, create supersession chains for conflic
 
 1. ~~**OpenRouter embedding model**~~ — **Resolved**: `qwen/qwen3-embedding-8b`.
 2. **Fallback**: if OpenRouter unavailable, allow local fallback (e.g., `candle` + `bge-m3` ONNX)? *Open — still the only hard external dependency in the read path.*
-3. **Skill invocation**: template expansion only, or also allow shell command templates? *Open — blocks S6.*
+3. ~~**Skill invocation**~~ — **Resolved**: expansion only. `uma_skill_invoke` returns command *text*; it never executes. Running it is the agent's call through its own shell tool, so the harness's command approval still applies. UMA does not become a code-execution surface reachable through a memory API.
 4. **Sync**: git-based (commits = fact changes) or custom rsync protocol? *Open — blocks S8.*
 5. **Pi panel**: TUI (like pi-blackhole) or simple text status? *Open — cosmetic, blocks nothing.*
 6. ~~**Model for consolidation proposer**~~ — **Resolved**: none. S5 is deterministic lexical analysis (tokenize → light stem → Jaccard), so it needs no model at all and is fully testable offline.

@@ -6,6 +6,8 @@ export interface MemoryProposal {
   tags: string[];
   /** ULID of the fact this proposal replaces, when superseding. */
   supersedes?: string;
+  /** Invocation template for `skill` facts. Displayed for review; never executed. */
+  template?: string;
 }
 
 export interface ProposalResult {

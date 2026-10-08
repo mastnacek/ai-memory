@@ -31,6 +31,11 @@ pub struct WriteArgs {
     /// Tags (comma-separated)
     #[arg(long = "tags", value_delimiter = ',')]
     pub tags: Vec<String>,
+
+    /// Invocation template for `skill` facts (placeholders like {{tag}}).
+    /// Stored as data only — UMA expands it elsewhere and never executes it.
+    #[arg(long = "template")]
+    pub template: Option<String>,
 }
 
 /// Executes the Write vertical slice: creates and stores a new fact.
@@ -49,6 +54,7 @@ pub fn run(args: WriteArgs) -> Result<()> {
     let mut fact = Fact::new(scope, fact_type, args.title, body);
     fact.description = args.description;
     fact.tags = args.tags;
+    fact.template = args.template;
 
     let store = get_store(&fact.scope)?;
     store.write(&fact)?;

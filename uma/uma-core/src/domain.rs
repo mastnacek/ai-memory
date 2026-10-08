@@ -193,6 +193,9 @@ pub struct Fact {
     pub fact_type: FactType,
     pub title: String,
     pub description: Option<String>,
+    /// Invocation template for `skill` facts. Placeholders are written `{{name}}`.
+    /// It is data only — UMA expands it and prints the result, but never executes it.
+    pub template: Option<String>,
     pub body: String,
     pub status: FactStatus,
     pub supersedes: Option<FactId>,
@@ -211,6 +214,7 @@ impl Fact {
             fact_type,
             title,
             description: None,
+            template: None,
             body,
             status: FactStatus::Stable,
             supersedes: None,

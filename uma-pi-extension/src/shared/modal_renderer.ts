@@ -78,6 +78,11 @@ export function renderProposalView(opts: ModalRenderOptions): string[] {
       `  ${theme.fg("muted", "⤴  " + s.supersedesLabel + ":")} ${theme.fg("warning", proposal.supersedes)}`
     );
   }
+  if (proposal.template) {
+    rawLines.push(
+      `  ${theme.fg("muted", "⌘  " + s.templateLabel + ":")} ${theme.fg("dim", proposal.template)}`
+    );
+  }
   rawLines.push("");
 
   // 3. Title Box

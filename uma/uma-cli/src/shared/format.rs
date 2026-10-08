@@ -23,6 +23,9 @@ pub fn print_fact(fact: &Fact) {
     if let Some(until) = fact.validity.until {
         println!("Until:    {}", until.format("%Y-%m-%d %H:%M:%S UTC"));
     }
+    if let Some(ref template) = fact.template {
+        println!("Template: {}", template);
+    }
     if !fact.tags.is_empty() {
         println!("Tags:     {}", fact.tags.join(", "));
     }
