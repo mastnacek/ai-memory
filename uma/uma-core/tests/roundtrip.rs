@@ -4,10 +4,10 @@
 //! only and never touch the shared central index. Everything here therefore runs
 //! against isolated, throwaway state and can never damage real memory.
 //!
-//! Note on `Store::supersede`: it resolves the real global/project roots itself
-//! rather than using the store it is called on, so it is deliberately *not*
-//! exercised here — a test would write to live memory. The deprecation contract
-//! it depends on is covered by `deprecated_facts_drop_out_of_the_active_set`.
+//! Note on supersession: `Store::supersede` resolves the real global/project
+//! roots, so it must never be called from a test — it would write to live memory.
+//! `Store::supersede_within` is the single-store primitive used here instead; it
+//! cannot reach outside the store it is called on.
 
 use tempfile::tempdir;
 use uma_core::domain::{Fact, FactStatus, FactType, Scope};
@@ -75,6 +75,44 @@ fn index_search_roundtrip_returns_only_the_matching_fact() -> anyhow::Result<()>
     assert_eq!(hits.len(), 1);
     assert_eq!(hits[0].id, indexed.id);
     assert_eq!(hits[0].title, indexed.title);
+
+    Ok(())
+}
+
+#[test]
+fn supersede_roundtrip_retires_the_predecessor_and_chains_the_revision() -> anyhow::Result<()> {
+    let dir = tempdir()?;
+    let store = Store::new(dir.path().to_path_buf());
+
+    let original = fact(
+        "Use pnpm for dependency installs",
+        "Install dependencies with pnpm.",
+    );
+    store.write(&original)?;
+
+    let revision = fact(
+        "Use pnpm for dependency installation",
+        "Dependencies are installed with pnpm.",
+    );
+    let stored = store.supersede_within(&original.id, revision)?;
+
+    // The revision is active and chains back to what it replaced.
+    assert_eq!(stored.supersedes, Some(original.id));
+    assert_eq!(stored.status, FactStatus::Stable);
+
+    // The predecessor is deprecated with a closed validity window, never deleted.
+    let retired = store.read_by_id(&original.id)?;
+    assert_eq!(retired.status, FactStatus::Deprecated);
+    assert!(retired.validity.until.is_some());
+    assert_eq!(retired.title, original.title);
+
+    // Default reads therefore show exactly one live decision.
+    let now = chrono::Utc::now();
+    let all = store.list(&Scope::Global, Some(&FactType::Decision))?;
+    assert_eq!(all.len(), 2, "both revisions must remain on disk");
+    let active: Vec<_> = all.iter().filter(|f| f.is_active_at(now)).collect();
+    assert_eq!(active.len(), 1);
+    assert_eq!(active[0].id, stored.id);
 
     Ok(())
 }

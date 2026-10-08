@@ -124,26 +124,51 @@ impl Store {
         Ok(())
     }
 
-    /// Supersedes an existing fact with a new one: marks old as deprecated and chains supersedes.
-    pub fn supersede(&self, old_id: &FactId, mut new_fact: Fact) -> Result<Fact> {
-        let mut old_fact = Self::find_by_id(old_id)?;
-        let now = Utc::now();
-
+    /// Retires a fact **within this store**: deprecate it and close its validity.
+    fn retire(&self, old_id: &FactId, at: DateTime<Utc>) -> Result<()> {
+        let mut old_fact = self.read_by_id(old_id)?;
         old_fact.status = FactStatus::Deprecated;
-        old_fact.validity.until = Some(now);
+        old_fact.validity.until = Some(at);
+        self.write(&old_fact)
+    }
 
+    /// Writes a revision chained to `old_id` **within this store**.
+    fn store_revision(&self, old_id: &FactId, at: DateTime<Utc>, mut new_fact: Fact) -> Result<Fact> {
+        new_fact.supersedes = Some(*old_id);
+        new_fact.validity.since = at;
+        new_fact.status = FactStatus::Stable;
+        self.write(&new_fact)?;
+        Ok(new_fact)
+    }
+
+    /// Supersedes a fact confined to a **single** store: both the retirement and
+    /// the revision happen here, and no other root is ever resolved.
+    ///
+    /// Use this when the caller already knows which store holds the fact — an
+    /// isolated store in a test, or an importer walking another system's data.
+    /// Unlike [`Store::supersede`] it cannot reach outside `self`, so it is safe
+    /// to call against a temporary store.
+    pub fn supersede_within(&self, old_id: &FactId, new_fact: Fact) -> Result<Fact> {
+        let now = Utc::now();
+        self.retire(old_id, now)?;
+        self.store_revision(old_id, now, new_fact)
+    }
+
+    /// Supersedes a fact whose location is unknown: finds the predecessor, retires
+    /// it in its own store, then writes the revision into `self`.
+    ///
+    /// Because the two stores are resolved independently, a supersession may move
+    /// a fact between scopes (project → global, or the reverse).
+    pub fn supersede(&self, old_id: &FactId, new_fact: Fact) -> Result<Fact> {
+        let old_fact = Self::find_by_id(old_id)?;
         let old_store = match &old_fact.scope {
             Scope::Global => Self::global()?,
             Scope::Project(p) => Self::project(p.clone())?,
         };
-        old_store.write(&old_fact)?;
 
-        new_fact.supersedes = Some(*old_id);
-        new_fact.validity.since = now;
-        new_fact.status = FactStatus::Stable;
-
-        self.write(&new_fact)?;
-        Ok(new_fact)
+        let now = Utc::now();
+        old_store.retire(old_id, now)?;
+        self.store_revision(old_id, now, new_fact)
     }
 
     /// Reads a fact from its Markdown file.

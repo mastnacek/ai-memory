@@ -48,7 +48,7 @@ Capabilities that were not in the roadmap but are implemented, tested and in use
 | MCP server | `uma-cli/src/slices/mcp/` | Multi-client reach, read-only unless `--allow-writes`. Wire-level tested without spawning a process. |
 | Skill memory | `uma-cli/src/slices/skill/`, `uma-core/src/skill.rs` | Procedural memory: `template` frontmatter field + pure placeholder expansion. UMA expands, never executes. |
 
-**Current tally**: 61 Rust tests (32 CLI + 26 core + 3 integration) and 7 TypeScript tests, 0 warnings in both debug and release builds.
+**Current tally**: 62 Rust tests (32 CLI + 26 core + 4 integration) and 7 TypeScript tests, 0 warnings in both debug and release builds.
 
 ### Outstanding work (as of 2026-10-08)
 
@@ -59,8 +59,9 @@ Capabilities that were not in the roadmap but are implemented, tested and in use
 | Local embedding fallback | S9 | Question 2 |
 | Auto-recall / context injection | S3 | On hold by operator preference (deliberate) |
 | Pi panel / `/uma status` | S9 | Question 5 (cosmetic, blocks nothing) |
-| `supersede` integration test | — | Needs `Store::supersede` to accept an injected store |
+| `supersede` integration test | — | ✅ Done: `Store::supersede_within` |
 | Manual Pi test on 2+ models | — | Needs an interactive session |
+| `uma-core/src/store.rs` is 325 lines | — | Over the 300-line soft target (under the 400 hard limit): extract the path/resolver helpers |
 | MCP cross-client test | S7 | Needs an external MCP client |
 
 ---
@@ -377,7 +378,7 @@ Imports preserve `created_at`, map types, create supersession chains for conflic
 - [x] Pi tool registered, callable, returns typed result
 - [x] Unit tests: domain logic, indexer, search fusion
 - [x] Integration test: `uma-core/tests/roundtrip.rs` — write → read → list, index → search, deprecation contract
-- [ ] Integration test for `supersede`: blocked by a real design flaw — `Store::supersede` resolves the **real** global/project roots internally instead of using the store it was called on, so a test would write to live memory. Fix: let the caller inject the target store. Until then it is verified manually and through unit coverage.
+- [x] Integration test for `supersede`: `Store::supersede_within` is a single-store primitive (retire + revise, never resolving another root), so `uma-core/tests/roundtrip.rs` now covers the full supersession chain with no risk of writing to live memory. `Store::supersede` stays the caller-facing convenience that resolves roots and keeps its cross-scope behaviour (a supersession may move a fact project → global).
 - [ ] Manual test in Pi session with 2+ models (Opus, Sonnet, local)
 - [x] Docs updated: `slices/<feature>/README.md` — colocated with the slice (what it does, why it exists, its invariant), not a central `docs/` tree
 
