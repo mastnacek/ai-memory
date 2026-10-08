@@ -62,15 +62,16 @@ Capabilities that were not in the roadmap but are implemented, tested and in use
 | `uma list` hides deprecated facts | It printed a superseded rule beside its replacement — the exact hazard supersession exists to remove. |
 | `uma_consolidate` removed from the gated set | It only proposes; gating a read would have made approval routine. |
 | `doctor` opens the index read-only | `Indexer::open` drops and recreates `facts_fts` on a schema mismatch, so a diagnosis would have silently repaired what it was measuring. |
+| Hybrid degradation is now visible | `Store::search_all` fell back to keyword-only **invisibly** — the caller believed it got hybrid ranking and did not. Worse, a failing embedding *call* (network/quota/bad key) failed the whole search with no results even though BM25 works. Degradation is now part of the return value (`SearchOutcome`), so it cannot be dropped on the way to the user. |
+| `search.rs` split into a folder | It was 394 lines, six below the 400 hard limit — the next search change would have been refused. Now `search/{mod,keyword,semantic,fusion,outcome}.rs`, all under the soft target. |
 
-**Current tally**: 78 Rust tests (39 CLI + 35 core + 4 integration) and 7 TypeScript tests, 0 warnings in both debug and release builds.
+**Current tally**: 85 Rust tests (39 CLI + 42 core + 4 integration) and 7 TypeScript tests, 0 warnings in both debug and release builds.
 
 ### Outstanding work (as of 2026-10-08)
 
 | Item | Slice | Blocked by |
 | :--- | :--- | :--- |
 | `uma sync push/pull` (the polish commands are done) | S8 | Question 4 (git vs rsync) |
-| **Hybrid search degrades silently** | — | `Store::search_all` falls back to keyword-only when the embedding client cannot be built, with **no signal to the caller** — so the agent believes it got hybrid ranking and did not. `--mode semantic` errors honestly; hybrid does not. Unblocked, small: report the degradation in the result. |
 | **`stale_after` is unreachable** | — | Parsed, stored, and honoured by `is_active_at`, but **no CLI slice can ever set it**. Either wire it up (`uma write --stale-after`, surface stale facts) or remove it — an unreachable field is a lie in the data model. |
 | Import from prior memory systems (§9) | **unlisted** | **Speculative.** Checked 2026-10-08: none of the four source stores exist on this machine (`~/.pi/agent/memory`, `.memsearch/memory`, `~/.engram/vault`, `~/.pi/agent/pi-hermes-memory`), and their formats would have to be reverse-engineered. Revisit only when a real migration is actually needed. |
 | Local embedding fallback | S9 | Question 2 |
@@ -78,7 +79,7 @@ Capabilities that were not in the roadmap but are implemented, tested and in use
 | Pi panel / `/uma status` | S9 | Question 5 (cosmetic, blocks nothing) |
 | `supersede` integration test | — | ✅ Done: `Store::supersede_within` |
 | Manual Pi test on 2+ models | — | Needs an interactive session |
-| Files over the 300-line soft target | — | `search.rs` **394** (nearly the 400 hard limit — split first), `indexer.rs` 338, `store.rs` 327, `consolidate.rs` 311. All under the hard limit, none urgent yet |
+| Files over the 300-line soft target | — | `search.rs` split ✅ (now `search/` modules, max 296). Remaining: `indexer.rs` 338, `store.rs` 332, `consolidate.rs` 311. All comfortably under the 400 hard limit |
 | MCP cross-client test | S7 | Needs an external MCP client |
 
 ---
