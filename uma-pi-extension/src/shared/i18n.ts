@@ -30,6 +30,10 @@ export interface Strings {
   autoApproveEnabled: string;
   autoApproveDisabled: string;
   autoApproveCurrent: string;
+  recallGateEnabled: string;
+  recallGateDisabled: string;
+  recallGateCurrent: string;
+  recallJudgeLabel: string;
   descUmaCommand: string;
   scopeGlobal: string;
   scopeProject: string;
@@ -69,6 +73,10 @@ const STRINGS: Record<Locale, Strings> = {
     autoApproveEnabled: "Auto-approval enabled (modal review skipped)",
     autoApproveDisabled: "Auto-approval disabled (modal review active)",
     autoApproveCurrent: "Auto-approve state: ",
+    recallGateEnabled: "Fastbrain recall gate ON (memory injected only when the judge triggers)",
+    recallGateDisabled: "Fastbrain recall gate OFF (recall stays explicit)",
+    recallGateCurrent: "Recall gate state: ",
+    recallJudgeLabel: "Judge",
     descUmaCommand: "Universal Memory Architecture (UMA) manager",
     scopeGlobal: "Global (all projects)",
     scopeProject: "Project",
@@ -106,6 +114,10 @@ const STRINGS: Record<Locale, Strings> = {
     autoApproveEnabled: "Automatické schvalování zapnuto (modální okno se nezobrazuje)",
     autoApproveDisabled: "Automatické schvalování vypnuto (modální okno je aktivní)",
     autoApproveCurrent: "Stav automatického schvalování: ",
+    recallGateEnabled: "Recallová brána ZAPNUTÁ (paměť se injektuje jen při triggeru)",
+    recallGateDisabled: "Recallová brána VYPNUTÁ (recall zůstává explicitní)",
+    recallGateCurrent: "Stav recallové brány: ",
+    recallJudgeLabel: "Soudce",
     descUmaCommand: "Správa paměťového systému UMA",
     scopeGlobal: "Globální (všechny projekty)",
     scopeProject: "Projekt",

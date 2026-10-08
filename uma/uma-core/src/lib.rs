@@ -1,5 +1,6 @@
 pub mod consolidate;
 pub mod domain;
+pub mod fastbrain;
 pub mod embeddings;
 pub mod health;
 pub mod indexer;

@@ -21,10 +21,7 @@ fn test_real_credentials_block() {
     ];
     for (label, value) in cases {
         let findings = scan_text(&format!("the key is {value} in prod"));
-        assert!(
-            is_blocked(&findings),
-            "{label} must block: {findings:?}"
-        );
+        assert!(is_blocked(&findings), "{label} must block: {findings:?}");
     }
 }
 
@@ -51,14 +48,24 @@ fn test_doc_templates_pass() {
 #[test]
 fn test_env_var_names_are_not_secrets_but_values_are() {
     let env = vec![
-        ("GITHUB_TOKEN".to_string(), "ghp_0123456789abcdefghijklmnopqrstuvwxyzAB".to_string()),
+        (
+            "GITHUB_TOKEN".to_string(),
+            "ghp_0123456789abcdefghijklmnopqrstuvwxyzAB".to_string(),
+        ),
         ("HOME".to_string(), "/home/jaroslav".to_string()),
         ("EDITOR".to_string(), "vim".to_string()),
     ];
     let literals = env_secret_literals(&env);
-    assert_eq!(literals.len(), 1, "only the secret-shaped value is a literal");
+    assert_eq!(
+        literals.len(),
+        1,
+        "only the secret-shaped value is a literal"
+    );
 
-    let findings = scan("auth token ghp_0123456789abcdefghijklmnopqrstuvwxyzAB leaked", &literals);
+    let findings = scan(
+        "auth token ghp_0123456789abcdefghijklmnopqrstuvwxyzAB leaked",
+        &literals,
+    );
     assert!(is_blocked(&findings));
 
     // HOME/EDITOR values are not treated as credentials.
@@ -68,12 +75,16 @@ fn test_env_var_names_are_not_secrets_but_values_are() {
 
 #[test]
 fn test_url_credentials_and_bearer() {
-    assert!(is_blocked(&scan_text("remote https://user:S3cretPassw0rd!@git.example.com/repo.git")));
+    assert!(is_blocked(&scan_text(
+        "remote https://user:S3cretPassw0rd!@git.example.com/repo.git"
+    )));
     assert!(is_blocked(&scan_text(
         "authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
     )));
     // Prose that merely mentions bearer stays safe.
-    assert!(!is_blocked(&scan_text("bearer authentication is documented here")));
+    assert!(!is_blocked(&scan_text(
+        "bearer authentication is documented here"
+    )));
 }
 
 #[test]
@@ -102,7 +113,10 @@ fn test_previews_are_masked() {
     let value = "sk-proj-abcdefghij0123456789abcdefghij3";
     let findings = scan_text(&format!("key {value}"));
     let preview = &findings[0].preview;
-    assert!(!preview.contains("abcdefghij0123456789"), "full value never in preview");
+    assert!(
+        !preview.contains("abcdefghij0123456789"),
+        "full value never in preview"
+    );
     assert!(preview.contains('…'), "preview is elided: {preview}");
 }
 
@@ -112,6 +126,8 @@ fn test_placeholder_value_rules() {
     assert!(is_placeholder_value("${GITHUB_TOKEN}"));
     assert!(is_placeholder_value("OPENAI_API_KEY"));
     assert!(is_placeholder_value("sk-xxxxxxxxxxxxxxxxxxxx"));
-    assert!(!is_placeholder_value("sk-proj-abcdefghij0123456789abcdefghij3"));
+    assert!(!is_placeholder_value(
+        "sk-proj-abcdefghij0123456789abcdefghij3"
+    ));
     assert!(!is_placeholder_value("0123456789abcdef"));
 }

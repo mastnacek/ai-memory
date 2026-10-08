@@ -3,6 +3,7 @@ import { Type } from "typebox";
 import type { ExtensionState, MemoryProposal } from "../../shared/types.js";
 import { executeUma, readFactJson } from "../../shared/client.js";
 import { showProposalModal } from "../../shared/modal.js";
+import { scanProposal, refusalText } from "../../shared/secrets_client.js";
 
 export function registerSupersedeTool(pi: ExtensionAPI, state: ExtensionState): void {
   pi.registerTool({
@@ -63,6 +64,19 @@ export function registerSupersedeTool(pi: ExtensionAPI, state: ExtensionState): 
         stale_after: params.staleAfter,
         since: params.since,
       };
+
+      // Secret gate BEFORE the modal, same as the write tool: a revision
+      // carrying a credential never reaches the operator as saveable.
+      const scanText = [proposal.title, proposal.body, proposal.template]
+        .filter(Boolean)
+        .join("\n");
+      const scan = await scanProposal(ctx.cwd, scanText);
+      if (scan.blocked) {
+        return {
+          content: [{ type: "text", text: refusalText(scan) }],
+          details: { rejected: true, secretFindings: scan.findings },
+        };
+      }
 
       // Same approval contract as uma_write: review the revision before it is stored.
       let approved = proposal;

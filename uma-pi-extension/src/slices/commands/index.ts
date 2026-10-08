@@ -67,6 +67,35 @@ export function registerCommands(pi: ExtensionAPI, state: ExtensionState): void 
         } else {
           ctx.ui.notify(`${liveStrings.langCurrent}${state.config.lang}`, "info");
         }
+      } else if (subcommand === "recall") {
+        // Trailing --global: persist to ~/.pi/agent/uma.json (all sessions)
+        // instead of <cwd>/.pi/uma.json (this project only).
+        const wantsGlobal = isGlobal || cleanParts.includes("--global");
+        const target = cleanParts[1];
+        if (target === "on" || target === "true") {
+          saveConfig({ recallGate: true }, wantsGlobal, ctx.cwd, state.globalConfigFile);
+          state.config = { ...state.config, recallGate: true };
+          ctx.ui.notify(liveStrings.recallGateEnabled, "info");
+        } else if (target === "off" || target === "false") {
+          saveConfig({ recallGate: false }, wantsGlobal, ctx.cwd, state.globalConfigFile);
+          state.config = { ...state.config, recallGate: false };
+          ctx.ui.notify(liveStrings.recallGateDisabled, "info");
+        } else {
+          ctx.ui.notify(
+            `${liveStrings.recallGateCurrent}${state.config.recallGate ? "ON" : "OFF"} (${liveStrings.recallJudgeLabel}: ${state.config.fastbrainJudge})`,
+            "info",
+          );
+        }
+      } else if (subcommand === "judge") {
+        const wantsGlobal = isGlobal || cleanParts.includes("--global");
+        const target = cleanParts[1];
+        if (target === "jev" || target === "off") {
+          saveConfig({ fastbrainJudge: target }, wantsGlobal, ctx.cwd, state.globalConfigFile);
+          state.config = { ...state.config, fastbrainJudge: target };
+          ctx.ui.notify(`${liveStrings.recallJudgeLabel}: ${target}`, "info");
+        } else {
+          ctx.ui.notify(`${liveStrings.recallJudgeLabel}: ${state.config.fastbrainJudge}`, "info");
+        }
       } else if (subcommand === "auto-approve") {
         const target = cleanParts[1];
         if (target === "on" || target === "true") {

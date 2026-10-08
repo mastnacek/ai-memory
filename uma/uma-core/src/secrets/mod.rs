@@ -68,7 +68,11 @@ pub fn is_placeholder_value(raw: &str) -> bool {
     // The value body (after any provider prefix) is one repeated character.
     let body: String = res.provider_prefix.replace(s, "").into_owned();
     let mut chars = body.chars();
-    if body.chars().count() >= 4 && chars.next().is_some_and(|first| body.chars().all(|c| c == first)) {
+    if body.chars().count() >= 4
+        && chars
+            .next()
+            .is_some_and(|first| body.chars().all(|c| c == first))
+    {
         return true;
     }
     if res.placeholder_words.is_match(s) {
@@ -88,9 +92,24 @@ fn looks_like_word(value: &str) -> bool {
     let lower = value.to_lowercase();
     matches!(
         lower.as_str(),
-        "password" | "changeme" | "disabled" | "enabled" | "true" | "false" | "localhost"
-            | "default" | "example" | "secret" | "token" | "undefined" | "null" | "none"
-            | "required" | "optional" | "development" | "production"
+        "password"
+            | "changeme"
+            | "disabled"
+            | "enabled"
+            | "true"
+            | "false"
+            | "localhost"
+            | "default"
+            | "example"
+            | "secret"
+            | "token"
+            | "undefined"
+            | "null"
+            | "none"
+            | "required"
+            | "optional"
+            | "development"
+            | "production"
     ) || compiled().word_value.is_match(value)
 }
 
@@ -108,7 +127,8 @@ pub fn env_secret_literals(env: &[(String, String)]) -> Vec<String> {
         }
         if let Some(url) = url_re.captures(value) {
             let password = &url[1];
-            if password.len() >= 8 && !looks_like_word(password) && !is_placeholder_value(password) {
+            if password.len() >= 8 && !looks_like_word(password) && !is_placeholder_value(password)
+            {
                 out.insert(password.to_string());
             }
         }

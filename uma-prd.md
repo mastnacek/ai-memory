@@ -70,7 +70,7 @@ Capabilities that were not in the roadmap but are implemented, tested and in use
 | `search.rs` split into a folder | It was 394 lines, six below the 400 hard limit — the next search change would have been refused. Now `search/{mod,keyword,semantic,fusion,outcome}.rs`, all under the soft target. |
 | `stale_after` is now settable and visible | It was parsed, stored and honoured by `is_active_at`, but **no CLI slice could set it** — an unreachable field, i.e. a lie in the data model. Now: `uma write/supersede --stale-after` (bare dates accepted), a `[STALE]` badge distinct from `[DEPRECATED]`, and a `doctor` staleness check that names the remedy. Verified end-to-end, including MCP inheritance. |
 
-**Current tally**: 128 Rust tests (62 CLI + 62 core lib + 4 integration) and 7 TypeScript tests, 0 warnings in both debug and release builds.
+**Current tally**: 149 Rust tests (64 CLI + 81 core lib + 4 integration) and 10 TypeScript tests, 0 warnings in both debug and release builds.
 
 ### Outstanding work (as of 2026-10-08)
 

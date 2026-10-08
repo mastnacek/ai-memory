@@ -6,6 +6,10 @@ import type { PluginConfig } from "./types.js";
 const DEFAULT_CONFIG: PluginConfig = {
   lang: "cs",
   autoApprove: false,
+  // S3 was paused by operator preference; the gate reopens it only when the
+  // operator flips it on explicitly.
+  recallGate: false,
+  fastbrainJudge: "off",
 };
 
 export function getGlobalConfigPath(): string {

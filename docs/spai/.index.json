@@ -1,5 +1,40 @@
 {
   "version": 1,
-  "lastUpdated": "2026-10-08 09:23:05",
-  "records": []
+  "lastUpdated": "2026-10-08 22:45:08",
+  "records": [
+    {
+      "id": "SPAI-001",
+      "title": "Jev native transport: swap the OpenRouter chat-completion emulation in uma-core/src/fastbrain/jev.rs for the native System One API (api.typesafe.ai/v1/systemone, TYPESAFE_API_KEY) to get calibrated probabilities per answer, not the router's flat 0.8",
+      "type": "Idea",
+      "status": "idea",
+      "symbol": "?",
+      "timestamp": "2026-10-08 22:45:00",
+      "tags": [
+        "fastbrain",
+        "jev",
+        "typed-outputs"
+      ],
+      "priority": "medium",
+      "project": "ai-memory",
+      "projectPath": "D:/01_programovani/ai-memory",
+      "file": "2026-10-08-SPAI-001-jev-native-transport-swap-the-openrouter-chat-comp.md"
+    },
+    {
+      "id": "SPAI-002",
+      "title": "Run `uma consolidate --scope mozek_rust --judge jev` on the 2 Czech fact bodies as a live semantic check of the contradiction judge, then record the verdict in memory",
+      "type": "Todo",
+      "status": "todo",
+      "symbol": ".",
+      "timestamp": "2026-10-08 22:45:08",
+      "tags": [
+        "consolidate",
+        "jev",
+        "czech"
+      ],
+      "priority": "medium",
+      "project": "ai-memory",
+      "projectPath": "D:/01_programovani/ai-memory",
+      "file": "2026-10-08-SPAI-002-run-uma-consolidate-scope-mozek-rust-judge-jev-on-.md"
+    }
+  ]
 }

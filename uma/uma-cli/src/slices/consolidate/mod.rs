@@ -1,8 +1,10 @@
 use anyhow::Result;
 use clap::Args;
+use std::collections::HashMap;
 use std::str::FromStr;
-use uma_core::consolidate::{analyze, AnalyzeOptions};
-use uma_core::domain::FactType;
+use uma_core::consolidate::{analyze, AnalyzeOptions, ContradictionPair, ConsolidationReport};
+use uma_core::domain::{Fact, FactType};
+use uma_core::fastbrain;
 
 use crate::shared::{scope::resolve_scope, store_helper::get_store};
 
@@ -27,6 +29,11 @@ pub struct ConsolidateArgs {
     /// Include deprecated facts in the analysis
     #[arg(long = "include-deprecated")]
     pub include_deprecated: bool,
+
+    /// Relationship judge: off = deterministic heuristics, jev = Jev via
+    /// OpenRouter (degrades to heuristics with a note when unavailable)
+    #[arg(long = "judge", default_value = "off", value_parser = ["off", "jev"])]
+    pub judge: String,
 
     /// Accepted for parity with the documented workflow; consolidation never applies changes
     #[arg(long = "dry-run")]
@@ -58,7 +65,10 @@ pub fn run(args: ConsolidateArgs) -> Result<()> {
         title_weight: args.title_weight.clamp(0.0, 1.0),
         include_deprecated: args.include_deprecated,
     };
-    let report = analyze(&facts, &opts);
+    let mut report = analyze(&facts, &opts);
+    if args.judge == "jev" {
+        refine_with_judge(&mut report, &facts);
+    }
 
     if args.json {
         println!("{}", serde_json::to_string_pretty(&report)?);
@@ -101,6 +111,64 @@ pub fn run(args: ConsolidateArgs) -> Result<()> {
 
     println!("Nothing was modified — review, then apply with `uma supersede` or `uma write`.");
     Ok(())
+}
+
+/// Refines duplicate groups semantically: a pair the lexical pass merged but
+/// the judge calls a contradiction moves to the contradictions list.
+///
+/// Read-only like everything in this slice — the report is proposals, and
+/// applying one is still a supersession through the modal.
+fn refine_with_judge(
+    report: &mut ConsolidationReport,
+    facts: &[Fact],
+) {
+    let by_id: HashMap<uma_core::domain::FactId, &Fact> = facts.iter().map(|f| (f.id, f)).collect();
+    for group in &mut report.duplicate_groups {
+        let mut kept = Vec::with_capacity(group.ids.len());
+        let mut members = group.ids.iter();
+        if let Some(first) = members.next() {
+            kept.push(*first);
+            for id in members {
+                let Some(right) = by_id.get(id) else {
+                    kept.push(*id);
+                    continue;
+                };
+                let Some(left_fact) = by_id.get(first) else {
+                    kept.push(*id);
+                    continue;
+                };
+                let text = format!("{}
+{}", left_fact.title, left_fact.body);
+                let other = format!("{}
+{}", right.title, right.body);
+                match fastbrain::judge_relationship(&text, &other, fastbrain::Judge::Jev) {
+                    Ok(judgment) => {
+                        if judgment.answer == fastbrain::Relationship::Contradiction {
+                            report.contradictions.push(ContradictionPair {
+                                left: *first,
+                                right: *id,
+                                left_title: left_fact.title.clone(),
+                                right_title: right.title.clone(),
+                                score: judgment.confidence,
+                                reason: format!(
+                                    "Jev judge: opposite rules ({}; {})",
+                                    judgment.judged_by.as_str(),
+                                    judgment.notes.as_deref().unwrap_or("")
+                                ),
+                            });
+                            continue;
+                        }
+                    }
+                    Err(failure) => {
+                        eprintln!("note: judge unavailable ({failure}); keeping lexical verdict");
+                    }
+                }
+                kept.push(*id);
+            }
+        }
+        group.ids = kept;
+    }
+    report.duplicate_groups.retain(|g| g.ids.len() >= 2);
 }
 
 #[cfg(test)]

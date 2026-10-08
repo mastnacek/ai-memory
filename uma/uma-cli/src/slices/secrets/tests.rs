@@ -15,7 +15,11 @@ fn parse(args: &[&str]) -> Result<SecretsArgs, clap::Error> {
         Secrets(SecretsArgs),
     }
 
-    let all = ["uma"].iter().chain(args.iter()).copied().collect::<Vec<_>>();
+    let all = ["uma"]
+        .iter()
+        .chain(args.iter())
+        .copied()
+        .collect::<Vec<_>>();
     let parsed = Cli::try_parse_from(all)?;
     match parsed.command {
         Top::Secrets(args) => Ok(args),

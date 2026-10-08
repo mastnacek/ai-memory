@@ -62,6 +62,8 @@ ai-memory/
     │   │   ├── embeddings.rs   # OpenRouter embedding client
     │   │   ├── vector_store.rs # fact_embeddings table
     │   │   ├── similarity.rs   # Lexical similarity (tokenize, stem, Jaccard)
+│   ├── secrets/        # Credential gate (patterns, placeholder filter, env literals)
+│   ├── fastbrain/      # System-1 triage: offline heuristics + Jev transport
     │   │   ├── consolidate.rs  # Duplicate groups + contradiction pairs
     │   │   ├── skill.rs        # Skill template placeholder expansion
     │   │   ├── timeline.rs     # Supersession chain reconstruction
@@ -96,7 +98,9 @@ ai-memory/
                 ├── sync/       # S8: git-backed sync of the global store
                 ├── scopes/     # cross-project scope discovery (read-only)
                 ├── sessions/   # S9: session browser over pi/claude stores (read-only)
-                └── import/     # S9: session→memory candidates (proposals only, never writes)
+                ├── import/     # S9: session→memory candidates (proposals only, never writes)
+                ├── secrets/    # credential gate: scan before anything enters memory (read-only)
+                └── recall/     # fastbrain recall gate: whether to search, never a mutation
                 # every slice folder = mod.rs (+ helpers) + README.md
 ```
 

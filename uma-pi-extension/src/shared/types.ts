@@ -22,6 +22,10 @@ export interface ProposalResult {
 export interface PluginConfig {
   lang: "cs" | "en";
   autoApprove: boolean;
+  /** Fastbrain recall gate (S3 compromise): OFF — recall stays explicit. */
+  recallGate: boolean;
+  /** Recall judge transport: "off" (markers) or "jev" (Jev via OpenRouter). */
+  fastbrainJudge: "off" | "jev";
 }
 
 export interface ExtensionState {

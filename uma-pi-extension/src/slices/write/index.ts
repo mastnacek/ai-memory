@@ -3,6 +3,7 @@ import { Type } from "typebox";
 import type { ExtensionState, MemoryProposal } from "../../shared/types.js";
 import { executeUma } from "../../shared/client.js";
 import { showProposalModal } from "../../shared/modal.js";
+import { scanProposal, refusalText } from "../../shared/secrets_client.js";
 
 export function registerWriteTool(pi: ExtensionAPI, state: ExtensionState): void {
   pi.registerTool({
@@ -57,6 +58,19 @@ export function registerWriteTool(pi: ExtensionAPI, state: ExtensionState): void
         stale_after: params.staleAfter,
         since: params.since,
       };
+
+      // Secret gate BEFORE the modal: a credential-carrying proposal must
+      // never reach the operator's review as a saveable option.
+      const scanText = [initialProposal.title, initialProposal.body, initialProposal.template]
+        .filter(Boolean)
+        .join("\n");
+      const scan = await scanProposal(ctx.cwd, scanText);
+      if (scan.blocked) {
+        return {
+          content: [{ type: "text", text: refusalText(scan) }],
+          details: { rejected: true, secretFindings: scan.findings },
+        };
+      }
 
       // In interactive TUI mode (and when autoApprove is false), show the modal proposal window
       let approvedProposal = initialProposal;
