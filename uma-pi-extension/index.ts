@@ -3,6 +3,7 @@ import { loadConfig } from "./src/shared/config.js";
 import { createExtensionState } from "./src/shared/state.js";
 import { registerTools } from "./src/slices/tools/index.js";
 import { registerCommands } from "./src/slices/commands/index.js";
+import { evaluateApprovalGate } from "./src/hooks/approval_gate.js";
 
 export default function umaExtension(pi: ExtensionAPI): void {
   // 1. Guard against subagent recursion
@@ -34,7 +35,10 @@ export default function umaExtension(pi: ExtensionAPI): void {
     }
   });
 
-  // 5. Register feature slices
+  // 5. Guard hook: fail closed on memory mutations without an approval UI.
+  track(pi.on("tool_call", (event, ctx) => evaluateApprovalGate(event, ctx, state)));
+
+  // 6. Register feature slices
   registerTools(pi, state);
   registerCommands(pi, state);
 }

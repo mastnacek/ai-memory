@@ -10,7 +10,7 @@ This document defines the architectural guidelines, development standards, and r
 - **Not a Pure Pi Plugin**: UMA is an independent, standalone memory platform written in **Rust** with multi-client delivery:
   - **Standalone CLI (`uma`)**: Direct terminal interface and agent scripting.
   - **Universal MCP Server (stdio JSON-RPC)**: Integrates seamlessly with Claude Code, Cursor, OpenCode, Codex, and any MCP-compliant client.
-  - **Pi Extension (`uma-pi-extension`)**: Thin TypeScript wrapper providing native Pi tools (`uma_write`, `uma_recall`, `/uma` panel commands).
+  - **Pi Extension (`uma-pi-extension`)**: VSA TypeScript plugin providing native Pi tools (`uma_write`, `uma_read`, `uma_list`, `uma_search`, `uma_supersede`), a fail-closed approval gate, an interactive approval modal, and `/uma` slash commands.
 
 ---
 
@@ -109,12 +109,32 @@ When implementing new capabilities, add them as **new vertical feature slices**:
 
 ---
 
-## 6. Agent Memory Guidelines (`uma-memory` Skill)
+## 6. Agent Memory Guidelines (two `uma-memory` skills)
 
-All agents working on this project should utilize UMA tools (`uma_write`, `uma_read`, `uma_list` or `uma` CLI) according to the `uma-memory` skill:
+UMA ships **two deliberately different skills**. They are split by capability boundary, not
+duplicated — do not merge them, and do not copy one into the other:
+
+| Skill | Path | Audience | May contain |
+| :--- | :--- | :--- | :--- |
+| **General** | `skills/uma-memory/SKILL.md` | any skill-reading agent (CLI / MCP) | only portable material: capture triggers, quality, OKF v0.2, lifecycle, `uma` CLI. **No harness-specific tools, UIs, or commands.** |
+| **Pi** | `.pi/skills/uma-memory-pi/SKILL.md` | the Pi agent | Pi-only deltas: `uma_*` tools, approval modal, approval gate, `/uma` commands, `auto-approve`, reload rule. |
+
+The general file must stay correct for an agent that has no Pi tools; naming a Pi-only tool there
+would make that agent hunt for something that does not exist. The Pi skill references the general
+file by path and adds only what is Pi-specific.
+
+### Approval gate (fail-closed)
+
+A `tool_call` hook (`uma-pi-extension/src/hooks/approval_gate.ts`) guards every memory-mutating
+tool (`uma_write`, `uma_supersede`, `uma_consolidate`). A mutation is allowed only when an
+interactive approval UI exists (the tool then shows its modal) **or** the operator enabled
+auto-approval. In `pi -p`, RPC, JSON, or nested `codemode` calls the write is blocked.
+Never bypass the gate by calling the `uma` CLI to force a write — that defeats operator consent.
+
+### Operating rules
 
 1. **Capture Decisions & Preferences**:
-   - Whenever an architectural choice, design pattern, or user preference is established, record it immediately as a structured fact (`decision`, `preference`, `pattern`).
+   - Whenever an architectural choice, design pattern, or user preference is established, record it as a structured fact (`decision`, `preference`, `pattern`).
    - Use `Scope::Project` for codebase-specific rules and `Scope::Global` for cross-cutting user preferences.
 2. **Quality Rules**:
    - **Atomic**: One concept per fact.
@@ -122,4 +142,6 @@ All agents working on this project should utilize UMA tools (`uma_write`, `uma_r
    - **Structured Body**: Markdown with Context, Rule, and Consequences.
    - **Tags**: Lowercase, comma-separated domain keywords (e.g. `vsa, rust, arch`).
 3. **Check Memory Before Implementing**:
-   - Query existing facts with `uma_list` or `uma list` to respect past architectural decisions before refactoring or introducing new patterns.
+   - Query existing facts with `uma_search` / `uma list` to respect past decisions before refactoring or introducing new patterns.
+4. **Prefer Supersession Over Duplication**: revise via `uma_supersede`, never by adding a contradicting fact.
+5. **Propose, Do Not Impose**: writes should go through the approval modal so the operator can approve, edit, or reject them.

@@ -20,9 +20,11 @@ export async function showProposalModal(
   const s = stringsFor(lang);
   const projectName = resolveProjectName(ctx.cwd);
 
-  // If not running in interactive TUI mode, fallback to direct auto-approval
+  // Fail closed: with no interactive UI there is nobody to approve, so refuse.
+  // The `tool_call` approval gate blocks this path first; this is defence in
+  // depth in case the modal is ever reached without a UI.
   if (ctx.mode !== "tui" || !ctx.hasUI) {
-    return { action: "approved", proposal: initialProposal };
+    return { action: "rejected", proposal: initialProposal };
   }
 
   // Normalize initial scope
