@@ -241,7 +241,14 @@ mod tests {
     #[test]
     fn test_skill_invoke_accepts_repeated_sets() {
         match skill_args(&[
-            "uma", "skill", "invoke", "docker-build", "--set", "tag=v1", "--set", "env=prod",
+            "uma",
+            "skill",
+            "invoke",
+            "docker-build",
+            "--set",
+            "tag=v1",
+            "--set",
+            "env=prod",
         ])
         .command
         {

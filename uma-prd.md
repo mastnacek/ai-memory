@@ -46,8 +46,22 @@ Capabilities that were not in the roadmap but are implemented, tested and in use
 | Slice READMEs + folder layout | every `slices/<feature>/` | Colocated what/why/invariant docs; see AGENTS.md §2. |
 | Integration roundtrip harness | `uma-core/tests/roundtrip.rs` | write → read → list, index → search, deprecation contract. |
 | MCP server | `uma-cli/src/slices/mcp/` | Multi-client reach, read-only unless `--allow-writes`. Wire-level tested without spawning a process. |
+| Skill memory | `uma-cli/src/slices/skill/`, `uma-core/src/skill.rs` | Procedural memory: `template` frontmatter field + pure placeholder expansion. UMA expands, never executes. |
 
-**Current tally**: 33 Rust tests (11 CLI + 19 core + 3 integration) and 7 TypeScript tests, 0 warnings.
+**Current tally**: 61 Rust tests (32 CLI + 26 core + 3 integration) and 7 TypeScript tests, 0 warnings in both debug and release builds.
+
+### Outstanding work (as of 2026-10-08)
+
+| Item | Slice | Blocked by |
+| :--- | :--- | :--- |
+| Polish commands (`timeline`, `export --okf`, `doctor`) + `uma sync push/pull` | S8 | Question 4 (git vs rsync) |
+| Import from prior memory systems (§9) | **unlisted** | Never scoped into the roadmap table |
+| Local embedding fallback | S9 | Question 2 |
+| Auto-recall / context injection | S3 | On hold by operator preference (deliberate) |
+| Pi panel / `/uma status` | S9 | Question 5 (cosmetic, blocks nothing) |
+| `supersede` integration test | — | Needs `Store::supersede` to accept an injected store |
+| Manual Pi test on 2+ models | — | Needs an interactive session |
+| MCP cross-client test | S7 | Needs an external MCP client |
 
 ---
 
@@ -197,14 +211,18 @@ They share the **same `uma` binary and store**. No duplication.
 - [ ] **Test**: write from Claude Code, read in Pi, search in Cursor — requires an external MCP client, so manual
 
 ### **Week 9: S8 — Polish & Sync**
-- [ ] `/uma timeline`, `/uma export --okf`, `/uma doctor`
-- [ ] Git sync: `uma sync push/pull` (bundles facts as commits)
-- [ ] Benchmarks, docs, migration guide from pi-memory/memorix
+- [ ] `/uma timeline` (supersession chain view), `/uma export --okf` (portable export), `/uma doctor` (store + index health)
+- [ ] Git sync: `uma sync push/pull` (bundles facts as commits) — needs question 4 answered
+- [ ] Benchmarks and a migration guide from pi-memory / memorix
 
 ### **Week 10+: S9 — Advanced Features**
-- [ ] `/uma timeline`, `/uma export --okf`, `/uma doctor`
-- [ ] Git sync: `uma sync push/pull` (bundles facts as commits)
-- [ ] Benchmarks, docs, migration guide from pi-memory/memorix
+
+> Note: this section previously duplicated S8 verbatim. It now lists the genuinely remaining advanced work.
+
+- [ ] **Import slice** (see §9): `uma import pi-memory | memorix | engram | hermes`, preserving `created_at` and creating supersession chains for conflicts. This was described in prose but **never added to the roadmap table**, so it has no slice number.
+- [ ] Local embedding fallback so semantic search survives an OpenRouter outage (question 2)
+- [ ] Revisit auto-recall / context injection (S3) once the on-demand path has proven itself
+- [ ] `/uma status` and the Pi panel (question 5)
 
 ---
 

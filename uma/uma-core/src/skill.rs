@@ -127,10 +127,7 @@ mod tests {
 
     #[test]
     fn test_expand_substitutes_every_placeholder() {
-        let result = expand(
-            "docker build -t {{tag}} .",
-            &vars(&[("tag", "v1")]),
-        );
+        let result = expand("docker build -t {{tag}} .", &vars(&[("tag", "v1")]));
         assert_eq!(result.output, "docker build -t v1 .");
         assert!(result.missing.is_empty());
         assert!(result.unused.is_empty());

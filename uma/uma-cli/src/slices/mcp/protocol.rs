@@ -90,8 +90,8 @@ mod tests {
         assert_eq!(call.method, "tools/list");
         assert!(!call.is_notification());
 
-        let note = Request::parse(r#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#)
-            .unwrap();
+        let note =
+            Request::parse(r#"{"jsonrpc":"2.0","method":"notifications/initialized"}"#).unwrap();
         assert!(note.is_notification());
     }
 

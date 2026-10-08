@@ -67,11 +67,7 @@ pub fn run(args: McpArgs) -> Result<()> {
 
 /// Runs the request loop against any reader/writer pair, so the wire protocol is
 /// testable without spawning a process.
-fn serve_loop<R: BufRead, W: Write>(
-    input: R,
-    out: &mut W,
-    allow_writes: bool,
-) -> Result<()> {
+fn serve_loop<R: BufRead, W: Write>(input: R, out: &mut W, allow_writes: bool) -> Result<()> {
     for line in input.lines() {
         let line = line?;
         if line.trim().is_empty() {
@@ -133,7 +129,11 @@ fn call_tool(request: &Request, allow_writes: bool) -> Value {
     let id = request.id.clone().unwrap_or(Value::Null);
 
     let Some(name) = request.params.get("name").and_then(Value::as_str) else {
-        return error(id, INVALID_PARAMS, "tools/call requires a 'name' parameter.");
+        return error(
+            id,
+            INVALID_PARAMS,
+            "tools/call requires a 'name' parameter.",
+        );
     };
     let args = request
         .params
