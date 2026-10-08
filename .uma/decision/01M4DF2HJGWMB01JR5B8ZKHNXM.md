@@ -8,7 +8,7 @@ tags:
   - safety
   - hooks
   - pi
-status: stable
+status: deprecated
 generated:
   by: pi-agent/1.1
   at: "2026-10-08T09:56:22.224725500+00:00"
@@ -16,6 +16,7 @@ verified:
   - by: "human:operator"
     at: "2026-10-08T09:56:22.224728300+00:00"
 since: "2026-10-08T09:56:22.224728300+00:00"
+until: "2026-10-08T10:08:21.321138400+00:00"
 ---
 ### Context
 Memory-mutating tools must not be able to write without operator consent. A check inside each tool is not enough: nested `codemode` calls, RPC/JSON modes, and `pi -p` print mode can all reach a tool without a usable approval UI.
