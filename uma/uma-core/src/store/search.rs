@@ -2,14 +2,16 @@
 
 use crate::domain::{FactType, Scope};
 use crate::embeddings::EmbeddingClient;
-use crate::search::{search_hybrid_resilient, search_keyword, search_semantic, SearchMode, SearchOptions, SearchOutcome};
-use anyhow::{Result};
+use crate::search::{
+    search_hybrid_resilient, search_keyword, search_semantic, SearchMode, SearchOptions,
+    SearchOutcome,
+};
+use anyhow::Result;
 use chrono::{DateTime, Utc};
 
 use super::Store;
 
 impl Store {
-
     /// Performs search using BM25 keyword matching, Semantic vector search, or Hybrid RRF fusion.
     pub fn search_all(
         query: &str,
@@ -95,5 +97,4 @@ impl Store {
         let client = EmbeddingClient::new(None)?;
         indexer.vectorize_missing(&client)
     }
-
 }

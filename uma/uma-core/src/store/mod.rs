@@ -2,7 +2,7 @@ use crate::domain::{FactId, FactType, Scope};
 use crate::indexer::Indexer;
 use anyhow::{Context, Result};
 use directories::ProjectDirs;
-use std::path::{PathBuf};
+use std::path::PathBuf;
 
 mod lookup;
 
@@ -15,7 +15,6 @@ pub struct Store {
 }
 
 impl Store {
-
     pub fn new(root: PathBuf) -> Self {
         Self { root }
     }

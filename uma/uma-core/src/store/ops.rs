@@ -5,12 +5,11 @@ use crate::embeddings::EmbeddingClient;
 use crate::serialization::{fact_to_markdown, markdown_to_fact};
 use anyhow::{Context, Result};
 use chrono::{DateTime, Utc};
-use walkdir::{WalkDir};
+use walkdir::WalkDir;
 
 use super::Store;
 
 impl Store {
-
     /// Writes a fact to its Markdown file and, for canonical stores, updates
     /// the shared central index.
     pub fn write(&self, fact: &Fact) -> Result<()> {
@@ -173,5 +172,4 @@ impl Store {
         }
         Ok(())
     }
-
 }
