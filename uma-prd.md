@@ -27,7 +27,7 @@ Each slice = **one user-visible capability** + its data, tools, storage, tests. 
 | **S4** | Temporal validity + Supersession | "What was true on 2026-01-15?", replace facts | S0, S1, S2 (Completed) |
 | **S5** | Consolidation proposer (agent-reviewed) | Merge dupes, fix contradictions | S4 (Completed) |
 | **S6** | Skill memory (procedural) | Reusable how-to with invocation template | S4 (Completed) |
-| **S7** | MCP server (stdio) | Claude Code, Cursor, OpenCode read/write same store | S1, S2 |
+| **S7** | MCP server (stdio) | Claude Code, Cursor, OpenCode read/write same store | S1, S2 (Completed) |
 | **S8** | Cross-machine sync (git/rsync) | Portable memory | S0 |
 
 **Vertical-slice rule**: Each slice ships a working `uma` CLI command + Pi tool(s) + tests. No "infrastructure slice".
@@ -45,6 +45,7 @@ Capabilities that were not in the roadmap but are implemented, tested and in use
 | `uma read --json` | `slices/read/` | Lets the Pi supersede modal prefill the predecessor's real type/scope/tags. |
 | Slice READMEs + folder layout | every `slices/<feature>/` | Colocated what/why/invariant docs; see AGENTS.md §2. |
 | Integration roundtrip harness | `uma-core/tests/roundtrip.rs` | write → read → list, index → search, deprecation contract. |
+| MCP server | `uma-cli/src/slices/mcp/` | Multi-client reach, read-only unless `--allow-writes`. Wire-level tested without spawning a process. |
 
 **Current tally**: 33 Rust tests (11 CLI + 19 core + 3 integration) and 7 TypeScript tests, 0 warnings.
 
@@ -185,10 +186,15 @@ They share the **same `uma` binary and store**. No duplication.
 - [x] Expansion is pure and lives in `uma-core/src/skill.rs` (7 unit tests); JSON output carries `"executed": false`
 - [x] **Test**: skill stored, recalled by name, template expanded; missing/typo placeholders reported and left visible
 
-### **Week 8: S7 — MCP Server (stdio)**
-- [ ] `uma mcp serve` → stdio JSON-RPC, registers 5 tools
-- [ ] Test with Claude Code: `claude mcp add uma -- uma mcp serve`
-- [ ] **Test**: write from Claude Code, read in Pi, search in Cursor
+### **Week 8: S7 — MCP Server (stdio)** ✅
+- [x] `uma mcp serve` → newline-delimited JSON-RPC over stdio; implements `initialize`, `ping`, `tools/list`, `tools/call`
+- [x] **Read-only by default**: advertises and allows `uma_read`, `uma_list`, `uma_search`, `uma_consolidate`
+- [x] `uma mcp serve --allow-writes` additionally enables `uma_write` and `uma_supersede`
+- [x] Hand-rolled protocol instead of `rmcp`: the surface is four methods, so a framework would be more dependency surface than protocol
+- [x] Mutations are refused **server-side** without the flag, not merely hidden from `tools/list` — otherwise the flag would be advisory and a client could reach a write by guessing a tool name
+- [x] Unit + wire tests: handshake, notification silence, malformed line survival, unknown method, tool-error shape
+- [x] Add to a client: `claude mcp add uma -- uma mcp serve`
+- [ ] **Test**: write from Claude Code, read in Pi, search in Cursor — requires an external MCP client, so manual
 
 ### **Week 9: S8 — Polish & Sync**
 - [ ] `/uma timeline`, `/uma export --okf`, `/uma doctor`
@@ -343,7 +349,7 @@ Imports preserve `created_at`, map types, create supersession chains for conflic
 4. **Sync**: git-based (commits = fact changes) or custom rsync protocol? *Open — blocks S8.*
 5. **Pi panel**: TUI (like pi-blackhole) or simple text status? *Open — cosmetic, blocks nothing.*
 6. ~~**Model for consolidation proposer**~~ — **Resolved**: none. S5 is deterministic lexical analysis (tokenize → light stem → Jaccard), so it needs no model at all and is fully testable offline.
-7. **MCP write policy**: `uma mcp serve` is a new tool path with **no modal**, so how does it obtain consent? *Open — blocks S7. Shipping write tools without an explicit launch-time opt-in would reopen the silent-write hole the approval gate closed.*
+7. ~~**MCP write policy**~~ — **Resolved**: read-only by default; `--allow-writes` is the explicit launch-time operator opt-in. Without it the server cannot mutate memory, and an attempted mutation is refused in-band rather than silently permitted.
 
 ---
 
@@ -386,7 +392,7 @@ ai-memory/
 └── docs/                         # Project docs (slice docs live in-slice)
 ```
 
-Not yet created: `uma-mcp/` (S7) and `xtask/`.
+Note: S7 is implemented as the `uma-cli/src/slices/mcp/` slice rather than a separate `uma-mcp/` crate — AGENTS.md mandates feature slices inside the CLI, and a separate crate would be a horizontal layer. `xtask/` is still not needed.
 
 ---
 

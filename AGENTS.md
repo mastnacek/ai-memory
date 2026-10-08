@@ -105,7 +105,7 @@ When implementing new capabilities, add them as **new vertical feature slices**:
 | **S4** | Temporal Validity & Supersession | `slices/supersede/`, `slices/migrate/` (OKF v0.2 Lifecycle & Chained Supersession) (Completed) |
 | **S5** | Consolidation Proposer | `slices/consolidate/` (Read-only merge/deduplication + contradiction proposals) (Completed) |
 | **S6** | Procedural Skill Memory | `slices/skill/` (Template storage + expansion; **never executes**) (Completed) |
-| **S7** | Universal MCP Server | `slices/mcp/` (`rmcp` / JSON-RPC stdio server) |
+| **S7** | Universal MCP Server | `slices/mcp/` (hand-rolled JSON-RPC stdio; **read-only unless `--allow-writes`**) (Completed) |
 | **S8** | Sync & Transport | `slices/sync/` (Git/rsync bundle sync) |
 
 ---

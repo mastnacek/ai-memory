@@ -9,47 +9,64 @@ pub fn status_suffix(status: &FactStatus) -> &'static str {
     }
 }
 
-/// Prints the complete representation of a Fact to stdout.
-pub fn print_fact(fact: &Fact) {
-    println!("ID:       {}", fact.id);
-    println!("Scope:    {}", fact.scope);
-    println!("Type:     {}", fact.fact_type);
-    println!("Title:    {}", fact.title);
-    println!("Status:   {}{}", fact.status, status_suffix(&fact.status));
-    println!(
-        "Since:    {}",
+/// Renders the complete representation of a Fact.
+///
+/// Split from `print_fact` so non-CLI consumers (the MCP server) can return the
+/// same text without printing it or duplicating the format.
+pub fn render_fact(fact: &Fact) -> String {
+    let mut out = String::new();
+
+    out.push_str(&format!("ID:       {}\n", fact.id));
+    out.push_str(&format!("Scope:    {}\n", fact.scope));
+    out.push_str(&format!("Type:     {}\n", fact.fact_type));
+    out.push_str(&format!("Title:    {}\n", fact.title));
+    out.push_str(&format!(
+        "Status:   {}{}\n",
+        fact.status,
+        status_suffix(&fact.status)
+    ));
+    out.push_str(&format!(
+        "Since:    {}\n",
         fact.validity.since.format("%Y-%m-%d %H:%M:%S UTC")
-    );
+    ));
     if let Some(until) = fact.validity.until {
-        println!("Until:    {}", until.format("%Y-%m-%d %H:%M:%S UTC"));
+        out.push_str(&format!(
+            "Until:    {}\n",
+            until.format("%Y-%m-%d %H:%M:%S UTC")
+        ));
     }
     if let Some(ref template) = fact.template {
-        println!("Template: {}", template);
+        out.push_str(&format!("Template: {}\n", template));
     }
     if !fact.tags.is_empty() {
-        println!("Tags:     {}", fact.tags.join(", "));
+        out.push_str(&format!("Tags:     {}\n", fact.tags.join(", ")));
     }
     if !fact.links.is_empty() {
-        println!(
-            "Links:    {}",
-            fact.links
-                .iter()
-                .map(|l| l.to_string())
-                .collect::<Vec<_>>()
-                .join(", ")
-        );
+        let links: Vec<String> = fact.links.iter().map(|l| l.to_string()).collect();
+        out.push_str(&format!("Links:    {}\n", links.join(", ")));
     }
-    println!();
-    println!("{}", fact.body);
+    out.push('\n');
+    out.push_str(&fact.body);
+    out
 }
 
-/// Prints a one-line summary of a Fact (for list views).
-pub fn print_fact_summary(fact: &Fact) {
-    println!(
+/// Prints the complete representation of a Fact to stdout.
+pub fn print_fact(fact: &Fact) {
+    println!("{}", render_fact(fact));
+}
+
+/// Renders a one-line summary of a Fact (for list views).
+pub fn render_fact_summary(fact: &Fact) -> String {
+    format!(
         "{} [{}] {}{}",
         fact.id,
         fact.fact_type,
         fact.title,
         status_suffix(&fact.status)
-    );
+    )
+}
+
+/// Prints a one-line summary of a Fact (for list views).
+pub fn print_fact_summary(fact: &Fact) {
+    println!("{}", render_fact_summary(fact));
 }

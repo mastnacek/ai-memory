@@ -1,5 +1,6 @@
 pub mod consolidate;
 pub mod list;
+pub mod mcp;
 pub mod migrate;
 pub mod read;
 pub mod search;

@@ -40,6 +40,9 @@ enum Commands {
 
     /// Procedural skill memory: store and expand invocation templates
     Skill(slices::skill::SkillArgs),
+
+    /// Serve memory over the Model Context Protocol (stdio JSON-RPC)
+    Mcp(slices::mcp::McpArgs),
 }
 
 fn main() -> Result<()> {
@@ -54,5 +57,6 @@ fn main() -> Result<()> {
         Commands::Migrate(args) => slices::migrate::run(args),
         Commands::Consolidate(args) => slices::consolidate::run(args),
         Commands::Skill(args) => slices::skill::run(args),
+        Commands::Mcp(args) => slices::mcp::run(args),
     }
 }
