@@ -11,6 +11,8 @@ export function getUmaCompletions(
 
   const currentLang = state.config.lang;
   const currentAuto = state.config.autoApprove;
+  const currentGate = state.config.recallGate;
+  const currentJudge = state.config.fastbrainJudge;
 
   // Level 2: Subcommand parameters
   if (tokens.length > 1 || (trailingSpace && tokens.length === 1)) {
@@ -48,6 +50,50 @@ export function getUmaCompletions(
         },
       ];
       return options.filter((o) => o.value.startsWith(`auto-approve ${subPrefix}`));
+    }
+
+    if (sub === "recall") {
+      const subPrefix = tokens[1]?.toLowerCase() || "";
+      const options = [
+        {
+          value: "recall on",
+          label: currentGate ? "on ✓" : "on",
+          description: currentGate
+            ? "Recall gate injects memory on trigger · ● ACTIVE"
+            : "Recall gate injects memory on trigger",
+        },
+        {
+          value: "recall off",
+          label: !currentGate ? "off ✓" : "off",
+          description: !currentGate
+            ? "Recall stays explicit (S3 paused) · ● ACTIVE"
+            : "Recall stays explicit (S3 paused)",
+        },
+      ];
+      return options.filter((o) => o.value.startsWith(`recall ${subPrefix}`));
+    }
+
+    if (sub === "judge") {
+      const subPrefix = tokens[1]?.toLowerCase() || "";
+      const options = [
+        {
+          value: "judge jev",
+          label: currentJudge === "jev" ? "jev ✓" : "jev",
+          description:
+            currentJudge === "jev"
+              ? "Jev via OpenRouter (semantic) · ● ACTIVE"
+              : "Jev via OpenRouter (semantic)",
+        },
+        {
+          value: "judge off",
+          label: currentJudge === "off" ? "off ✓" : "off",
+          description:
+            currentJudge === "off"
+              ? "Offline markers (deterministic) · ● ACTIVE"
+              : "Offline markers (deterministic)",
+        },
+      ];
+      return options.filter((o) => o.value.startsWith(`judge ${subPrefix}`));
     }
 
     if (sub === "list") {
@@ -159,6 +205,16 @@ export function getUmaCompletions(
       value: "auto-approve ",
       label: `auto-approve (${currentAuto ? "on" : "off"})`,
       description: `Toggle review modal (current: ${currentAuto ? "on" : "off"})`,
+    },
+    {
+      value: "recall ",
+      label: `recall (${currentGate ? "on" : "off"})`,
+      description: `Toggle the fastbrain recall gate (current: ${currentGate ? "on" : "off"})`,
+    },
+    {
+      value: "judge ",
+      label: `judge (${currentJudge})`,
+      description: `Recall judge transport (current: ${currentJudge})`,
     },
   ];
 

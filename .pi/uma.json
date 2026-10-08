@@ -1,3 +1,5 @@
 {
-  "autoApprove": false
+  "autoApprove": false,
+  "recallGate": true,
+  "fastbrainJudge": "jev"
 }
