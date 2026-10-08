@@ -55,6 +55,10 @@ Capabilities that were not in the roadmap but are implemented, tested and in use
 
 | Fix | Why it mattered |
 | :--- | :--- |
+| `search.rs`, `store.rs`, `indexer.rs`, `consolidate.rs` split into folders | All four had breached the 300-line soft target and `search.rs` was six lines from the 400 hard limit — the next change there would have been refused. Each now separates its concerns (`search/{keyword,semantic,fusion,outcome}`, `store/{mod,ops,search}`, `indexer/{mod,ops,query}`, `consolidate/{mod,tests}`) with tests extracted into their own `cfg(test)` files, and public paths are re-exported so no caller changed. |
+
+| Fix | Why it mattered |
+| :--- | :--- |
 | `uma_supersede` routed through the approval modal | It called the CLI directly and wrote **silently** — a memory mutation with no consent step at all. |
 | The supersede modal now carries `template` | A skill's template could be set or replaced without the reviewer ever seeing the value they were approving. |
 | `Store::supersede_within` extracted | `Store::supersede` resolves the real global/project roots, so supersession **could not be tested** without writing to live memory. Its integration test now exists. |
@@ -79,7 +83,7 @@ Capabilities that were not in the roadmap but are implemented, tested and in use
 | Pi panel / `/uma status` | S9 | Question 5 (cosmetic, blocks nothing) |
 | `supersede` integration test | — | ✅ Done: `Store::supersede_within` |
 | Manual Pi test on 2+ models | — | Needs an interactive session |
-| Files over the 300-line soft target | — | `search.rs` split ✅ (now `search/` modules, max 296). Remaining: `indexer.rs` 338, `store.rs` 332, `consolidate.rs` 311. All comfortably under the 400 hard limit |
+| ✅ Files over the 300-line soft target | — | **Done — none remain.** `search.rs` (394), `indexer.rs` (338), `store.rs` (342) and `consolidate.rs` (311) are now folders with cohesive submodules. Largest source file: 300 lines. |
 | MCP cross-client test | S7 | Needs an external MCP client |
 
 ---

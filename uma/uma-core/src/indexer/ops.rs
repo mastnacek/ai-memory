@@ -1,105 +1,18 @@
+//! Index maintenance: indexing, reindexing, embeddings.
+
 use crate::domain::{Fact, FactId, Scope};
 use crate::embeddings::EmbeddingClient;
 use crate::serialization::markdown_to_fact;
-use crate::vector_store::{self, init_vector_schema, load_all_embeddings, save_embedding};
-use anyhow::{Context, Result};
-use rusqlite::{params, Connection};
+use crate::vector_store::{self, load_all_embeddings, save_embedding};
+use anyhow::Result;
+use rusqlite::params;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use walkdir::WalkDir;
 
-/// Current layout of the `facts_fts` FTS5 table. Bump when columns change.
-///
-/// Public so health checks can report a mismatch between what a given
-/// `index.db` stores and what this build expects.
-pub const FTS_SCHEMA_VERSION: i64 = 2;
-
-pub struct Indexer {
-    conn: Connection,
-    #[allow(dead_code)]
-    db_path: PathBuf,
-}
+use super::Indexer;
 
 impl Indexer {
-    /// Opens or creates the centralized SQLite index database.
-    pub fn open<P: AsRef<Path>>(db_path: P) -> Result<Self> {
-        let db_path = db_path.as_ref().to_path_buf();
-        if let Some(parent) = db_path.parent() {
-            std::fs::create_dir_all(parent)
-                .with_context(|| format!("Failed to create directory {:?}", parent))?;
-        }
-        let conn = Connection::open(&db_path)
-            .with_context(|| format!("Failed to open index database {:?}", db_path))?;
-        let indexer = Self { conn, db_path };
-        indexer.init_schema()?;
-        Ok(indexer)
-    }
-
-    pub fn connection(&self) -> &Connection {
-        &self.conn
-    }
-
-    /// Initializes the FTS5 keyword and vector storage schemas.
-    ///
-    /// The FTS index is a rebuildable cache, so when the column layout changes
-    /// the old table is dropped rather than failing on a stale database.
-    fn init_schema(&self) -> Result<()> {
-        self.conn
-            .execute(
-                "CREATE TABLE IF NOT EXISTS uma_meta (key TEXT PRIMARY KEY, value INTEGER NOT NULL)",
-                [],
-            )
-            .context("Failed to initialize uma_meta table")?;
-
-        let current: i64 = self
-            .conn
-            .query_row(
-                "SELECT value FROM uma_meta WHERE key = 'fts_schema_version'",
-                [],
-                |r| r.get(0),
-            )
-            .unwrap_or(0);
-
-        // Verify the *actual* column layout rather than trusting the recorded
-        // version: an older build may have stamped a version without recreating
-        // the table. `facts_fts` is a rebuildable cache, so a mismatch means drop
-        // it and let the caller reindex.
-        let has_expected_columns = {
-            let mut stmt = self.conn.prepare("PRAGMA table_info(facts_fts)")?;
-            let cols: Vec<String> = stmt
-                .query_map([], |r| r.get::<_, String>(1))?
-                .filter_map(|c| c.ok())
-                .collect();
-            !cols.is_empty() && cols.iter().any(|c| c == "description")
-        };
-
-        if !has_expected_columns || current != FTS_SCHEMA_VERSION {
-            let _ = self.conn.execute_batch("DROP TABLE IF EXISTS facts_fts;");
-        }
-
-        self.conn
-            .execute_batch(
-                "CREATE VIRTUAL TABLE IF NOT EXISTS facts_fts USING fts5(
-                    id UNINDEXED, scope, project_name, fact_type, title, description,
-                    body, tags, status, supersedes UNINDEXED, file_path UNINDEXED,
-                    since UNINDEXED, until UNINDEXED, stale_after UNINDEXED,
-                    tokenize = 'porter unicode61'
-                );",
-            )
-            .context("Failed to initialize centralized FTS5 schema")?;
-
-        self.conn
-            .execute(
-                "INSERT INTO uma_meta (key, value) VALUES ('fts_schema_version', ?1)
-                 ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-                params![FTS_SCHEMA_VERSION],
-            )
-            .context("Failed to record FTS schema version")?;
-
-        init_vector_schema(&self.conn)?;
-        Ok(())
-    }
-
     /// Indexes a single Fact in FTS5 index.
     pub fn index_fact(&self, fact: &Fact, file_path: Option<&Path>) -> Result<()> {
         let id_str = fact.id.to_string();
@@ -267,72 +180,5 @@ impl Indexer {
 
         Ok(missing.len())
     }
-}
 
-/// Builds a prefix-match FTS5 query from free-form user input.
-pub fn build_fts_query(query: &str) -> String {
-    let tokens: Vec<&str> = query.split_whitespace().collect();
-    if tokens.is_empty() {
-        return query.to_string();
-    }
-    tokens
-        .iter()
-        .map(|t| {
-            let clean = t.trim_matches(|c: char| !c.is_alphanumeric() && c != '_');
-            if clean.is_empty() {
-                format!("\"{}\"", t)
-            } else {
-                format!("{}*", clean)
-            }
-        })
-        .collect::<Vec<_>>()
-        .join(" ")
-}
-
-/// Builds a quoted FTS5 query safe against syntax errors from special characters.
-pub fn build_safe_fts_query(query: &str) -> String {
-    query
-        .split_whitespace()
-        .map(|t| format!("\"{}\"", t.replace('"', "")))
-        .collect::<Vec<_>>()
-        .join(" ")
-}
-
-pub fn parse_scope_str(s: &str) -> Scope {
-    if s == "global" {
-        Scope::Global
-    } else if let Some(name) = s.strip_prefix("project:") {
-        Scope::Project(name.to_string())
-    } else {
-        Scope::Project(s.to_string())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::domain::FactType;
-    use tempfile::tempdir;
-
-    #[test]
-    fn test_indexer_write_and_schema_version() -> Result<()> {
-        let dir = tempdir()?;
-        let db_path = dir.path().join("index.db");
-        let indexer = Indexer::open(&db_path)?;
-
-        let fact1 = Fact::new(
-            Scope::Project("repo-a".to_string()),
-            FactType::Decision,
-            "Use PostgreSQL in Repo A".to_string(),
-            "Repo A uses PostgreSQL for relational storage.".to_string(),
-        );
-        indexer.index_fact(&fact1, None)?;
-
-        let count: i64 =
-            indexer
-                .connection()
-                .query_row("SELECT COUNT(*) FROM facts_fts", [], |r| r.get(0))?;
-        assert_eq!(count, 1);
-        Ok(())
-    }
 }
