@@ -274,7 +274,7 @@ export async function showProposalModal(
             : showTranslation && !displayTranslation.failed
               ? s.translatedNote
               : displayTranslation.failed
-                ? s.translationFailedNote
+                ? `${s.translationFailedNote} (${displayTranslation.error ?? "unknown"})`
                 : undefined
           : undefined;
       const lines = renderProposalView({

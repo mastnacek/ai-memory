@@ -7,7 +7,7 @@
  * slice; folding the translated body back into the proposal would
  * silently change what gets saved (the modal round-trip lesson).
  */
-import type { Api, Model } from "@earendil-works/pi-ai";
+import type { Api, AssistantMessage, Model } from "@earendil-works/pi-ai";
 import { completeSimple } from "@earendil-works/pi-ai/compat";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 
@@ -36,22 +36,57 @@ export async function translateForDisplay(
     if (!model) return { error: "no active model" };
     const auth = await ctx.modelRegistry.getApiKeyAndHeaders(model);
     if (!auth.ok) return { error: auth.error };
-    const reply = await completeSimple(model, buildTranslateMessages(body) as never, {
+
+    // completeSimple reports model errors as a MESSAGE (stopReason "error"),
+    // not a thrown exception — extract that path explicitly.
+    const extract = (reply: AssistantMessage): DisplayTranslationResult => {
+      if (reply.stopReason === "error") {
+        return { error: reply.errorMessage ?? "model error" };
+      }
+      const text = reply.content
+        ?.filter((c): c is { type: "text"; text: string } => c.type === "text")
+        .map((c) => c.text)
+        .join("")
+        .trim();
+      if (!text) return { error: "empty translation" };
+      return { text };
+    };
+
+    const opts = {
       apiKey: auth.apiKey,
       headers: auth.headers,
-    });
-    const text = reply.content
-      ?.filter((c): c is { type: "text"; text: string } => c.type === "text")
-      .map((c) => c.text)
-      .join("")
-      .trim();
-    if (!text) return { error: "empty translation" };
-    return { text };
+      env: auth.env,
+      signal: ctx.signal,
+    } as never;
+
+    // Prefer the registry's own completion (it resolves provider routing and
+    // auth the way pi does internally), then fall back to the compat shim.
+    const registry = ctx.modelRegistry as
+      | {
+          completeSimple?: (
+            m: Model<Api>,
+            context: never,
+            options?: never,
+          ) => Promise<AssistantMessage>;
+          complete?: (
+            m: Model<Api>,
+            context: never,
+            options?: never,
+          ) => Promise<AssistantMessage>;
+        }
+      | undefined;
+    const context = buildTranslateMessages(body) as never;
+    if (registry && typeof registry.completeSimple === "function") {
+      return extract(await registry.completeSimple(model, context, opts));
+    }
+    if (registry && typeof registry.complete === "function") {
+      return extract(await registry.complete(model, context, opts));
+    }
+    return extract(await completeSimple(model, context, opts));
   } catch (error) {
     return { error: error instanceof Error ? error.message : String(error) };
   }
 }
-
 /**
  * Modal-side controller over the display translation lifecycle.
  *
@@ -59,11 +94,13 @@ export async function translateForDisplay(
  * `start()` fires the translation once (fire-and-forget), `onChange` is the
  * modal's re-render trigger, and `bodyFor()` is the only place the display
  * selection happens — the original body and the translated cache never
- * merge, which is the slice invariant.
+ * merge, which is the slice invariant. The failure reason is kept visible:
+ * "unavailable" without a why is undebuggable.
  */
 export class DisplayTranslation {
   private text?: string;
   private state: "idle" | "pending" | "done" | "failed" = "idle";
+  private lastError?: string;
 
   constructor(
     private readonly ctx: ExtensionContext,
@@ -79,6 +116,7 @@ export class DisplayTranslation {
         this.text = result.text;
         this.state = "done";
       } else {
+        this.lastError = result.error;
         this.state = "failed";
       }
       this.onChange();
@@ -91,6 +129,10 @@ export class DisplayTranslation {
 
   get failed(): boolean {
     return this.state === "failed";
+  }
+
+  get error(): string | undefined {
+    return this.lastError;
   }
 
   /** The body to display: the cache when shown and ready, else the original. */
