@@ -110,6 +110,16 @@ export function formatGateDecision(
         ? "trigger, ale nic relevatního nenalezeno → nic se neinjektuje"
         : "trigger, nothing relevant found → injecting nothing";
 
-  const degraded = verdict.note ? ` ⚠ ${verdict.note}` : "";
-  return `🧠 ${asked} → trigger (${types || "general"}) → ${next}${degraded}`;
+  const degraded = verdict.note ? ` ⚠ ${elide(verdict.note, 100)}` : "";
+  const head = `🧠 ${asked} → trigger (${types || "general"}) → ${next}${degraded}`;
+
+  // The operator sees exactly what was injected — same content the model
+  // gets, formatted under the decision line. A notice that something was
+  // injected, without the something, is not observability.
+  const factLines = verdict.facts.map(
+    (fact, index) =>
+      `   ${index + 1}. [${fact.fact_type}] ${fact.title} (${formatScope(fact.scope)})\n` +
+      `      ${elide(fact.snippet, 110)}`,
+  );
+  return factLines.length > 0 ? `${head}\n${factLines.join("\n")}` : head;
 }

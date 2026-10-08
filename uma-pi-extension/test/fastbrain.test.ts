@@ -15,7 +15,8 @@ const fact = {
   id: "01TEST",
   title: "Sync is git-based over the global store only",
   fact_type: "decision",
-  scope: "project:ai-memory",
+  // The CLI serializes the Scope enum in serde's external wire form.
+  scope: { Project: "ai-memory" } as const,
   score: 0.9,
   snippet: "Sync is git-based…",
   tags: ["sync"],
@@ -79,6 +80,30 @@ test("a degraded judge verdict carries the warning", () => {
 
 test("long prompts are elided and whitespace collapsed", () => {
   const report = formatGateDecision("word ".repeat(40), verdict([fact]), "en");
-  assert.ok(report.length < 160, `too long: ${report.length}`);
-  assert.ok(!report.includes("\n"), report);
+  // The decision line stays short even when the fact list follows.
+  assert.ok(report.split("\n")[0].length < 160, `decision line too long: ${report}`);
+});
+
+test("the injected facts are listed under the decision line", () => {
+  const report = formatGateDecision(
+    "How does the supersede chain preserve the origin?",
+    verdict([fact, { ...fact, id: "01SECOND", title: "Second recalled fact" }]),
+    "en",
+  );
+  const lines = report.split("\n");
+  // Each fact takes two lines: numbered title + elided snippet.
+  assert.ok(lines[0].includes("injecting 2 fact(s)"), lines[0]);
+  assert.ok(lines[1].includes("1. [decision] Sync is git-based"), lines[1]);
+  assert.ok(lines[1].includes("project:ai-memory"), lines[1]);
+  assert.ok(lines[3].includes("2. [decision] Second recalled fact"), lines[3]);
+});
+
+test("no-trigger and zero-fact verdicts list no facts", () => {
+  const closed = formatGateDecision(
+    "thanks",
+    { ...verdict([fact]), search: false, fact_types: [], facts: [] },
+    "en",
+  );
+  assert.ok(!closed.includes("\n   1."), closed);
+  assert.ok(!formatGateDecision("why?", verdict([]), "en").includes("\n   1."));
 });
