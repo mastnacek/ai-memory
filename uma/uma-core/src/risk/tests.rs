@@ -37,7 +37,10 @@ fn test_history_of_pain_reaches_critical() {
     let score = compute(3, 3, 0);
     assert_eq!(score.score, 100);
     assert_eq!(score.band, Band::Critical);
-    assert_eq!(guidance(score.band), "Test-first: propose the failing test before changing this file.");
+    assert_eq!(
+        guidance(score.band),
+        "Test-first: propose the failing test before changing this file."
+    );
 }
 
 #[test]

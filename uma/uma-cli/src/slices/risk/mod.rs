@@ -60,7 +60,12 @@ fn pain_score(args: PainArgs) -> Result<()> {
         return Ok(());
     }
 
-    println!("Pain score for {}: {}/100 [{}]", args.path, score.score, score.band.as_str());
+    println!(
+        "Pain score for {}: {}/100 [{}]",
+        args.path,
+        score.score,
+        score.band.as_str()
+    );
     println!(
         "  correction mentions: {} · reverts: {} · churn (last {} commits): {}",
         score.correction_mentions, score.reverts, args.max_commits, score.churn
@@ -107,7 +112,7 @@ fn project_and_global_corrections() -> Result<Vec<Vec<Fact>>> {
 
 fn project_scope(_store: &Store) -> Result<Scope> {
     Ok(Store::current_project_name()
-        .map(|name| Scope::Project(name))
+        .map(Scope::Project)
         .unwrap_or(Scope::Global))
 }
 
@@ -118,7 +123,7 @@ fn fact_mentions(fact: &Fact, needle: &str, stem: &str) -> bool {
         return false;
     }
     let text = format!("{} {}", fact.title, fact.body).replace('\\', "/");
-    text.contains(&needle) || text.contains(&stem)
+    text.contains(needle) || text.contains(stem)
 }
 
 /// Reads git history for the file: reverts by subject, churn by commit count.

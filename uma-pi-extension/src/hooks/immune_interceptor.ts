@@ -51,22 +51,18 @@ async function fetchRules(cwd: string): Promise<RuleL1[]> {
     return rulesCache.rules;
   }
   const binPath = findUmaBinary(cwd);
-  const output = await withTimeout(
-    runUma(binPath, ["list", "--json", "--type", "decision", "--type", "pattern"], cwd),
-    CHECK_TIMEOUT_MS,
-  );
-  // One --type flag is accepted by clap but only the last wins; fetch both
-  // scopes separately and merge.
-  const decisions = output?.code === 0 ? output.stdout : undefined;
-  const patterns = await withTimeout(
-    runUma(binPath, ["list", "--json", "--type", "pattern"], cwd),
-    CHECK_TIMEOUT_MS,
-  );
+  // Two separate calls: clap rejects a repeated --type flag, and a single
+  // call with both types silently reduced the cache to patterns only — the
+  // decision rules (the VSA isolation rule among them) were missing.
+  const outputs = await Promise.all([
+    withTimeout(runUma(binPath, ["list", "--json", "--type", "decision"], cwd), CHECK_TIMEOUT_MS),
+    withTimeout(runUma(binPath, ["list", "--json", "--type", "pattern"], cwd), CHECK_TIMEOUT_MS),
+  ]);
   const rules: RuleL1[] = [];
-  for (const raw of [decisions, patterns?.code === 0 ? patterns.stdout : undefined]) {
-    if (!raw) continue;
+  for (const output of outputs) {
+    if (!output || output.code !== 0) continue;
     try {
-      const parsed = JSON.parse(raw) as RuleL1[];
+      const parsed = JSON.parse(output.stdout) as RuleL1[];
       rules.push(...parsed);
     } catch {
       // skip an unparsable response; the cache stays smaller, not wrong
