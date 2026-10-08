@@ -135,7 +135,12 @@ impl Store {
     }
 
     /// Writes a revision chained to `old_id` **within this store**.
-    fn store_revision(&self, old_id: &FactId, at: DateTime<Utc>, mut new_fact: Fact) -> Result<Fact> {
+    fn store_revision(
+        &self,
+        old_id: &FactId,
+        at: DateTime<Utc>,
+        mut new_fact: Fact,
+    ) -> Result<Fact> {
         new_fact.supersedes = Some(*old_id);
         new_fact.validity.since = at;
         new_fact.status = FactStatus::Stable;

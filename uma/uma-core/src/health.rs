@@ -135,7 +135,10 @@ mod tests {
         indexer.index_fact(&fact("no path"), None)?;
 
         let health = inspect(&db)?;
-        assert_eq!(health.stale_rows, 0, "unknown path is not the same as stale");
+        assert_eq!(
+            health.stale_rows, 0,
+            "unknown path is not the same as stale"
+        );
         Ok(())
     }
 

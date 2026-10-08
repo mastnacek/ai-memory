@@ -155,7 +155,13 @@ mod tests {
 
     #[test]
     fn test_timeline_accepts_id_and_all() {
-        let a = args(&["uma", "timeline", "--id", "01M4D6K8J6QGDFC0Y11FW45R87", "--all"]);
+        let a = args(&[
+            "uma",
+            "timeline",
+            "--id",
+            "01M4D6K8J6QGDFC0Y11FW45R87",
+            "--all",
+        ]);
         assert_eq!(a.id.as_deref(), Some("01M4D6K8J6QGDFC0Y11FW45R87"));
         assert!(a.all);
     }

@@ -59,7 +59,10 @@ fn step_of(fact: &Fact) -> ChainStep {
 ///
 /// A fact can in principle be superseded more than once; the newest revision
 /// wins so the chain stays linear and readable.
-fn successor_map<'a>(facts: &'a [Fact], by_id: &HashMap<FactId, &'a Fact>) -> HashMap<FactId, FactId> {
+fn successor_map<'a>(
+    facts: &'a [Fact],
+    by_id: &HashMap<FactId, &'a Fact>,
+) -> HashMap<FactId, FactId> {
     let mut successors: HashMap<FactId, FactId> = HashMap::new();
 
     for fact in facts {

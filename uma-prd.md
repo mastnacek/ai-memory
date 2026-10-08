@@ -51,6 +51,18 @@ Capabilities that were not in the roadmap but are implemented, tested and in use
 | `uma export` | `slices/export/` | OKF v0.2 bundle or JSON, so memory is never locked into this tool. |
 | `uma doctor` | `slices/doctor/`, `uma-core/src/health.rs` | Read-only health report. Found real index drift on its first run. |
 
+### Hardening (defects found by using the tooling on itself)
+
+| Fix | Why it mattered |
+| :--- | :--- |
+| `uma_supersede` routed through the approval modal | It called the CLI directly and wrote **silently** — a memory mutation with no consent step at all. |
+| The supersede modal now carries `template` | A skill's template could be set or replaced without the reviewer ever seeing the value they were approving. |
+| `Store::supersede_within` extracted | `Store::supersede` resolves the real global/project roots, so supersession **could not be tested** without writing to live memory. Its integration test now exists. |
+| `uma supersede --template`, inherited when omitted | Without it a skill was immutable, and a revision silently dropped the template, leaving the skill unexpandable. |
+| `uma list` hides deprecated facts | It printed a superseded rule beside its replacement — the exact hazard supersession exists to remove. |
+| `uma_consolidate` removed from the gated set | It only proposes; gating a read would have made approval routine. |
+| `doctor` opens the index read-only | `Indexer::open` drops and recreates `facts_fts` on a schema mismatch, so a diagnosis would have silently repaired what it was measuring. |
+
 **Current tally**: 78 Rust tests (39 CLI + 35 core + 4 integration) and 7 TypeScript tests, 0 warnings in both debug and release builds.
 
 ### Outstanding work (as of 2026-10-08)
@@ -119,28 +131,31 @@ type Fact = {
 
 **Why both?**
 - **MCP (stdio)** → universal: Claude Code, Cursor, OpenCode, Codex, any MCP client
-- **Pi extension** → native Pi tools (`uma_write`, `uma_search`, `uma_recall`), context injection, `/uma` panel commands
+- **Pi extension** → native Pi tools (`uma_write`, `uma_read`, `uma_list`, `uma_search`, `uma_supersede`, `uma_consolidate`, `uma_skill_invoke`), an interactive approval modal, and `/uma` slash commands. (Context injection is S3 — on hold by operator preference.)
 
 They share the **same `uma` binary and store**. No duplication.
 
-**MCP tools exposed**:
+**MCP tools exposed** — read-only by default; the last two require `--allow-writes`:
 ```json
 {
   "tools": [
-    { "name": "uma_write", "description": "Add/replace a fact", "inputSchema": {...} },
     { "name": "uma_read", "description": "Read fact by ID" },
+    { "name": "uma_list", "description": "List facts for a scope/type" },
     { "name": "uma_search", "description": "Hybrid search (keyword + semantic)" },
-    { "name": "uma_supersede", "description": "Replace fact, chain supersession" },
-    { "name": "uma_consolidate", "description": "Propose merges/dedups for review" }
+    { "name": "uma_consolidate", "description": "Propose merges/dedups for review" },
+    { "name": "uma_write", "description": "Add a fact", "inputSchema": {...} },
+    { "name": "uma_supersede", "description": "Replace fact, chain supersession" }
   ]
 }
 ```
+A mutation attempted without `--allow-writes` is refused server-side, not merely hidden from `tools/list`.
 
 **Pi extension tools** (mirror MCP + Pi-specific):
-- Registered today: `uma_write`, `uma_read`, `uma_list`, `uma_search`, `uma_supersede`, `uma_consolidate`
+- Registered today: `uma_write`, `uma_read`, `uma_list`, `uma_search`, `uma_supersede`, `uma_consolidate`, `uma_skill_invoke`
 - `uma_recall` — **not built**: auto-injection is S3, on hold by operator preference
-- Slash commands registered today: `/uma search | list | read | reindex | lang | auto-approve`
-- `status`, `timeline`, `export`, `doctor` belong to S8 and are **not** implemented
+- Slash commands registered today: `/uma search | list | read | reindex | timeline | export | doctor | lang | auto-approve`, each with argument completions
+- `/uma status` and a Pi panel remain unimplemented — cosmetic, S9, question 5
+- Read-only tools are deliberately ungated: `uma_consolidate` (proposes) and `uma_skill_invoke` (expands). Gating a read would make approval routine and therefore meaningless.
 
 **Consent differs per tool path** — this is a design invariant, not an accident:
 - **Pi**: mutations are fail-closed behind an interactive approval modal. No UI ⇒ no write unless `autoApprove`.
@@ -403,8 +418,8 @@ ai-memory/
 │   ├── Cargo.toml                # workspace manifest
 │   ├── uma-core/                 # Shared kernel: domain, serialization, store,
 │   │   ├── src/                  #   indexer, search, embeddings, vector_store,
-│   │   │                         #   similarity, consolidate
-│   │   └── tests/roundtrip.rs    # integration roundtrip
+│   │   │                         #   similarity, consolidate, skill, timeline, health
+│   │   ├── tests/roundtrip.rs    # integration roundtrip
 │   └── uma-cli/src/
 │       ├── main.rs               # composition root (dispatch only)
 │       ├── shared/               # kernel: scope, store_helper, format
