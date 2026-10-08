@@ -191,9 +191,7 @@ impl Indexer {
 
     /// Generates embeddings for every indexed fact that lacks a vector.
     pub fn vectorize_missing(&self, client: &EmbeddingClient) -> Result<usize> {
-        let mut stmt = self
-            .conn
-            .prepare("SELECT id, title, body FROM facts_fts")?;
+        let mut stmt = self.conn.prepare("SELECT id, title, body FROM facts_fts")?;
         let mut rows = stmt.query([])?;
         let existing = load_all_embeddings(&self.conn)?;
         let mut missing = Vec::new();
@@ -283,9 +281,10 @@ mod tests {
         );
         indexer.index_fact(&fact1, None)?;
 
-        let count: i64 = indexer
-            .connection()
-            .query_row("SELECT COUNT(*) FROM facts_fts", [], |r| r.get(0))?;
+        let count: i64 =
+            indexer
+                .connection()
+                .query_row("SELECT COUNT(*) FROM facts_fts", [], |r| r.get(0))?;
         assert_eq!(count, 1);
         Ok(())
     }
