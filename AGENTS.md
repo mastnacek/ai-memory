@@ -103,7 +103,7 @@ When implementing new capabilities, add them as **new vertical feature slices**:
 | **S2** | Semantic Vector Search | `slices/search/` (OpenRouter embeddings + Hybrid RRF) (Completed) |
 | **S3** | Auto-Recall & Context Injection | `[?]` *On Hold* (Operator preference: on-demand explicit search) |
 | **S4** | Temporal Validity & Supersession | `slices/supersede/`, `slices/migrate/` (OKF v0.2 Lifecycle & Chained Supersession) (Completed) |
-| **S5** | Consolidation Proposer | `slices/consolidate/` (Merge/deduplication proposals) |
+| **S5** | Consolidation Proposer | `slices/consolidate/` (Read-only merge/deduplication + contradiction proposals) (Completed) |
 | **S6** | Procedural Skill Memory | `slices/skill/` (Templates & execution) |
 | **S7** | Universal MCP Server | `slices/mcp/` (`rmcp` / JSON-RPC stdio server) |
 | **S8** | Sync & Transport | `slices/sync/` (Git/rsync bundle sync) |

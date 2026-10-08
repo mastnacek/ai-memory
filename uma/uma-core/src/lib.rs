@@ -1,8 +1,10 @@
+pub mod consolidate;
 pub mod domain;
 pub mod embeddings;
 pub mod indexer;
 pub mod search;
 pub mod serialization;
+pub mod similarity;
 pub mod store;
 pub mod vector_store;
 

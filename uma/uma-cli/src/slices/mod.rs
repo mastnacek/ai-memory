@@ -1,3 +1,4 @@
+pub mod consolidate;
 pub mod list;
 pub mod migrate;
 pub mod read;

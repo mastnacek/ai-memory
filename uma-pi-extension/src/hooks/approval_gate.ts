@@ -5,8 +5,11 @@ import type { ExtensionState } from "../shared/types.js";
  * Tools that mutate the UMA store and therefore require an approval path.
  * Adding a future mutating tool means adding one entry here — the guard is
  * centralized rather than duplicated per tool.
+ *
+ * Deliberately excludes `uma_consolidate`: it only *proposes* merges and
+ * contradictions and never writes. Gating a read would make approval routine.
  */
-export const MEMORY_MUTATING_TOOLS = new Set(["uma_write", "uma_supersede", "uma_consolidate"]);
+export const MEMORY_MUTATING_TOOLS = new Set(["uma_write", "uma_supersede"]);
 
 /**
  * Fail-closed approval decision for a `tool_call`.

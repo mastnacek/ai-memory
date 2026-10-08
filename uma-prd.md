@@ -24,8 +24,8 @@ Each slice = **one user-visible capability** + its data, tools, storage, tests. 
 | **S1** | `uma_search` (keyword BM25) | Find facts by term | S0 (Completed) |
 | **S2** | `uma_search` (semantic vectors) | Find by meaning | S1 (Completed) |
 | **S3** | Auto-Recall & Context Injection | Auto-inject relevant facts into turn | S2 (On Hold / `[?]`) |
-| **S4** | Temporal validity + Supersession | "What was true on 2026-01-15?", replace facts | S0, S1, S2 |
-| **S5** | Consolidation proposer (agent-reviewed) | Merge dupes, fix contradictions | S4 |
+| **S4** | Temporal validity + Supersession | "What was true on 2026-01-15?", replace facts | S0, S1, S2 (Completed) |
+| **S5** | Consolidation proposer (agent-reviewed) | Merge dupes, fix contradictions | S4 (Completed) |
 | **S6** | Skill memory (procedural) | Reusable how-to with invocation template | S4 |
 | **S7** | MCP server (stdio) | Claude Code, Cursor, OpenCode read/write same store | S1, S2 |
 | **S8** | Cross-machine sync (git/rsync) | Portable memory | S0 |
@@ -146,10 +146,12 @@ They share the **same `uma` binary and store**. No duplication.
 - [x] FTS5 schema versioning: an old `index.db` is auto-rebuilt (the index is a rebuildable cache)
 - [x] **Test**: supersede chain queryable, deprecated version hidden by default, precise `--as-of` time-travel verified end-to-end
 
-### **Week 6: S5 — Consolidation Proposer**
-- [ ] `uma consolidate --scope project --dry-run` → prints proposed merges (same title/tags, similar body), contradiction flags (opposite decisions)
-- [ ] Agent reviews via `uma_consolidate` tool → returns proposals, agent calls `uma_write`/`uma_supersede` to accept
-- [ ] **Test**: two "use pnpm" facts → proposer merges
+### **Week 6: S5 — Consolidation Proposer** ✅
+- [x] `uma consolidate [--scope project] [--type t] [--threshold 0.55] [--json]` → prints proposed merges (overlapping title/body wording) and contradiction flags (similar wording, opposite polarity)
+- [x] Deterministic offline lexical analysis (`uma-core/src/similarity.rs` + `consolidate.rs`) — embeddings are an enhancement, never a prerequisite, so this slice is fully unit-testable
+- [x] Agent reviews via the `uma_consolidate` tool → returns proposals; the agent accepts with `uma_write` / `uma_supersede`, which are the gated tools
+- [x] Read-only by construction: the slice never writes, so it is deliberately **not** behind the approval gate
+- [x] **Test**: two "use pnpm" facts → proposer merges; "Use pnpm" vs "Do not use pnpm" → contradiction flag; unrelated facts → nothing
 
 ### **Week 7: S6 — Skill Memory**
 - [ ] `FactType::Skill` with extra field `InvocationTemplate: string`

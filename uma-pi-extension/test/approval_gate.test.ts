@@ -8,9 +8,15 @@ const state = (autoApprove: boolean) => ({ config: { lang: "cs", autoApprove } }
 const call = (toolName: string) => ({ type: "tool_call", toolCallId: "1", toolName, input: {} }) as never;
 
 test("read-only tools are never gated", () => {
-  for (const tool of ["uma_read", "uma_list", "uma_search", "bash", "read"]) {
+  // uma_consolidate belongs here: it proposes merges/contradictions but never
+  // writes, so gating it would make approval routine instead of meaningful.
+  for (const tool of ["uma_read", "uma_list", "uma_search", "uma_consolidate", "bash", "read"]) {
     assert.equal(evaluateApprovalGate(call(tool), ctx("print", false), state(false)), undefined);
   }
+});
+
+test("the gated set is exactly the memory-mutating tools", () => {
+  assert.deepEqual([...MEMORY_MUTATING_TOOLS].sort(), ["uma_supersede", "uma_write"]);
 });
 
 test("TUI with auto-approve off allows the call so the modal can open", () => {
