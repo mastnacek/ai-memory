@@ -18,7 +18,7 @@ mod outcome;
 mod semantic;
 
 pub use fusion::reciprocal_rank_fusion;
-pub use keyword::search_keyword;
+pub use keyword::{search_keyword, search_keyword_or};
 pub use outcome::{Degradation, DegradationReason, SearchOutcome};
 pub use semantic::search_semantic;
 

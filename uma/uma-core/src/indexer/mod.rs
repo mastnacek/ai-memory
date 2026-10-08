@@ -120,4 +120,4 @@ impl Indexer {
     }
 }
 
-pub use query::{build_fts_query, build_safe_fts_query, parse_scope_str};
+pub use query::{build_fts_query, build_fts_query_or, build_safe_fts_query, parse_scope_str};

@@ -44,20 +44,33 @@ pub struct Degradation {
 
 impl Degradation {
     pub fn message(&self) -> String {
-        let cause = match &self.reason {
-            DegradationReason::EmbeddingsUnavailable(err) => {
-                format!("embedding client unavailable ({err})")
-            }
-            DegradationReason::SemanticSearchFailed(err) => {
-                format!("semantic ranking failed ({err})")
-            }
-            DegradationReason::NoStoredEmbeddings => "no embeddings are stored".to_string(),
-        };
-        format!(
-            "{:?} search degraded to {:?}: {cause}. These results are keyword-only; \
-             run `uma search \"\" --vectorize` and check the embedding API key.",
-            self.requested, self.performed
-        )
+        match &self.reason {
+            DegradationReason::EmbeddingsUnavailable(err) => format!(
+                "{:?} search degraded to {:?}: embedding client unavailable ({err}). \
+                 These results are keyword-only; run `uma search \"\" --vectorize` and check \
+                 the embedding API key.",
+                self.requested, self.performed
+            ),
+            DegradationReason::SemanticSearchFailed(err) => format!(
+                "{:?} search degraded to {:?}: semantic ranking failed ({err}). \
+                 These results are keyword-only; run `uma search \"\" --vectorize` and check \
+                 the embedding API key.",
+                self.requested, self.performed
+            ),
+            DegradationReason::NoStoredEmbeddings => format!(
+                "{:?} search degraded to {:?}: no embeddings are stored. \
+                 These results are keyword-only; run `uma search \"\" --vectorize`.",
+                self.requested, self.performed
+            ),
+            // The relaxation degrades PRECISION, not the mode: say so instead
+            // of the vectorize advice, which does not apply here.
+            DegradationReason::QueryRelaxedToOr => format!(
+                "{:?} search relaxed to any-term matching: no fact contained every \
+                 query term. Results may be loosely related; narrow the query for \
+                 precision.",
+                self.requested
+            ),
+        }
     }
 }
 
@@ -70,6 +83,9 @@ pub enum DegradationReason {
     SemanticSearchFailed(String),
     /// Nothing is vectorized, so the semantic half cannot contribute.
     NoStoredEmbeddings,
+    /// The all-terms query matched nothing, so the search was retried with
+    /// any-term (OR) matching and those hits were returned instead.
+    QueryRelaxedToOr,
 }
 
 #[cfg(test)]

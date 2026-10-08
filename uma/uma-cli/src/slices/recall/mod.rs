@@ -102,7 +102,16 @@ fn check_prompt(args: CheckArgs) -> Result<()> {
         );
     }
 
-    let facts = recall_facts(&prompt, &need.fact_types, args.max)?;
+    let (facts, search_notes) = recall_facts(&prompt, &need.fact_types, args.max)?;
+    // Merge provenance (judge note) with the search's degradation notes so a
+    // relaxed recall is visible in the verdict, not silently presented as a
+    // precise match.
+    let note = match (verdict.notes.clone(), search_notes.is_empty()) {
+        (Some(judge_note), true) => Some(judge_note),
+        (Some(judge_note), false) => Some(format!("{judge_note}; {}", search_notes.join("; "))),
+        (None, false) => Some(search_notes.join("; ")),
+        (None, true) => None,
+    };
     emit(
         &RecallVerdict {
             search: true,
@@ -110,7 +119,7 @@ fn check_prompt(args: CheckArgs) -> Result<()> {
             fact_types: need.fact_types.clone(),
             recalled: facts.len(),
             facts,
-            note: verdict.notes,
+            note,
         },
         args.json,
     )
@@ -156,7 +165,11 @@ fn emit(verdict: &RecallVerdict, json: bool) -> Result<()> {
 
 /// Recalls facts for the trigger: the prompt's meaningful tokens as a BM25
 /// keyword query, filtered to the judge's subtypes when it named any.
-fn recall_facts(prompt: &str, fact_types: &[String], max: usize) -> Result<Vec<serde_json::Value>> {
+fn recall_facts(
+    prompt: &str,
+    fact_types: &[String],
+    max: usize,
+) -> Result<(Vec<serde_json::Value>, Vec<String>)> {
     let query = recall_query(prompt);
     let subtypes: Vec<FactType> = fact_types
         .iter()
@@ -164,6 +177,7 @@ fn recall_facts(prompt: &str, fact_types: &[String], max: usize) -> Result<Vec<s
         .collect();
 
     let mut facts = Vec::new();
+    let mut notes: Vec<String> = Vec::new();
     let filters: Vec<Option<FactType>> = if subtypes.is_empty() {
         vec![None]
     } else {
@@ -185,6 +199,13 @@ fn recall_facts(prompt: &str, fact_types: &[String], max: usize) -> Result<Vec<s
             None,
             max - facts.len(),
         )?;
+        // A relaxed (any-term) recall must be visible in the verdict, not
+        // silently presented as a precise match.
+        if let Some(note) = outcome.note() {
+            if !notes.contains(&note) {
+                notes.push(note);
+            }
+        }
         for hit in &outcome.hits {
             facts.push(serde_json::json!({
                 "id": hit.id,
@@ -198,7 +219,7 @@ fn recall_facts(prompt: &str, fact_types: &[String], max: usize) -> Result<Vec<s
         }
     }
     facts.truncate(max);
-    Ok(facts)
+    Ok((facts, notes))
 }
 
 /// Builds the search query from the prompt: meaningful words only, capped, so

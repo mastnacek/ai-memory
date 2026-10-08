@@ -22,6 +22,27 @@ pub fn build_fts_query(query: &str) -> String {
         .join(" ")
 }
 
+/// Builds an any-term (OR) FTS5 query: the relaxation for multi-token
+/// queries where the implicit-AND form matched nothing.
+pub fn build_fts_query_or(query: &str) -> String {
+    let tokens: Vec<&str> = query.split_whitespace().collect();
+    if tokens.is_empty() {
+        return query.to_string();
+    }
+    tokens
+        .iter()
+        .map(|t| {
+            let clean = t.trim_matches(|c: char| !c.is_alphanumeric() && c != '_');
+            if clean.is_empty() {
+                format!("\"{}\"", t)
+            } else {
+                format!("{}*", clean)
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" OR ")
+}
+
 /// Builds a quoted FTS5 query safe against syntax errors from special characters.
 pub fn build_safe_fts_query(query: &str) -> String {
     query

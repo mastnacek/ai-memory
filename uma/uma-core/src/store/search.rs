@@ -3,8 +3,8 @@
 use crate::domain::{FactType, Scope};
 use crate::embeddings::EmbeddingClient;
 use crate::search::{
-    search_hybrid_resilient, search_keyword, search_semantic, SearchMode, SearchOptions,
-    SearchOutcome,
+    search_hybrid_resilient, search_keyword, search_keyword_or, search_semantic, Degradation,
+    DegradationReason, SearchMode, SearchOptions, SearchOutcome,
 };
 use anyhow::Result;
 use chrono::{DateTime, Utc};
@@ -41,17 +41,34 @@ impl Store {
         match mode {
             SearchMode::Keyword => {
                 let hits = search_keyword(indexer.connection(), &opts)?;
-                if hits.is_empty() && indexer.indexed_count()? == 0 {
-                    // An empty index is a cache that was never built (or was
-                    // wiped), so build it and retry once. An empty RESULT on a
-                    // populated index is a genuine miss — rebuilding there
-                    // wiped and re-parsed the whole store on every typo.
-                    let indexed = Self::reindex_all()?;
-                    if indexed > 0 {
-                        return Ok(SearchOutcome::complete(search_keyword(
-                            indexer.connection(),
-                            &opts,
-                        )?));
+                if hits.is_empty() {
+                    if indexer.indexed_count()? == 0 {
+                        // An empty index is a cache that was never built (or was
+                        // wiped), so build it and retry once. An empty RESULT on a
+                        // populated index is a genuine miss — rebuilding there
+                        // wiped and re-parsed the whole store on every typo.
+                        let indexed = Self::reindex_all()?;
+                        if indexed > 0 {
+                            return Ok(SearchOutcome::complete(search_keyword(
+                                indexer.connection(),
+                                &opts,
+                            )?));
+                        }
+                    } else if opts.query.split_whitespace().count() > 1 {
+                        // A multi-token all-terms query matched nothing on a
+                        // populated index: relax to any-term matching, visibly —
+                        // the recall gate starved exactly here.
+                        let relaxed = search_keyword_or(indexer.connection(), &opts)?;
+                        if !relaxed.is_empty() {
+                            return Ok(SearchOutcome {
+                                hits: relaxed,
+                                degraded: Some(Degradation {
+                                    requested: SearchMode::Keyword,
+                                    performed: SearchMode::Keyword,
+                                    reason: DegradationReason::QueryRelaxedToOr,
+                                }),
+                            });
+                        }
                     }
                 }
                 Ok(SearchOutcome::complete(hits))
