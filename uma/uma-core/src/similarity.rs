@@ -15,9 +15,9 @@ const STOPWORDS: &[&str] = &[
     "also", "only", "more", "most", "such", "each", "other", "some", "very",
     // Czech: the import pipeline is Czech-heavy, and without these the
     // flexion-heavy function words dominate token overlap.
-    "nebo", "také", "taky", "jak", "když", "aby", "proto", "tento", "tato",
-    "toto", "tuto", "tohle", "který", "která", "které", "jen", "pak", "ještě",
-    "však", "právě", "jenže", "až", "už", "tedy", "protože",
+    "nebo", "také", "taky", "jak", "když", "aby", "proto", "tento", "tato", "toto", "tuto", "tohle",
+    "který", "která", "které", "jen", "pak", "ještě", "však", "právě", "jenže", "až", "už", "tedy",
+    "protože",
 ];
 
 /// Markers that flip a statement's polarity. Matching is done against the raw
@@ -152,6 +152,9 @@ mod tests {
         // unrelated Czech claims.
         let a = tokenize("Vždy používat pnpm v tomto repozitáři pro instalace");
         let b = tokenize("Nikdy neupravovat vygenerované soubory v tomto repozitáři");
-        assert!(jaccard(&a, &b) < 0.55, "unrelated Czech rules must not merge");
+        assert!(
+            jaccard(&a, &b) < 0.55,
+            "unrelated Czech rules must not merge"
+        );
     }
 }

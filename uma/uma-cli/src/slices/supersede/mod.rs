@@ -115,9 +115,12 @@ pub fn run(args: SupersedeArgs) -> Result<()> {
             new_fact.description.as_deref().unwrap_or(""),
             new_fact.template.as_deref().unwrap_or(""),
         ]
-        .join("
-");
-        let literals: Vec<String> = secrets::env_secret_literals(&std::env::vars().collect::<Vec<_>>());
+        .join(
+            "
+",
+        );
+        let literals: Vec<String> =
+            secrets::env_secret_literals(&std::env::vars().collect::<Vec<_>>());
         let findings = secrets::scan(&text, &literals);
         if secrets::is_blocked(&findings) {
             let list = findings

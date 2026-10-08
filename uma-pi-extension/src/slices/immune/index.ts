@@ -40,24 +40,15 @@ function tokenize(text: string): string[] {
     .filter((token) => token.length >= 4);
 }
 
-/** Jaccard overlap of two token bags. */
-function overlap(a: string[], b: string[]): number {
-  if (a.length === 0 || b.length === 0) return 0;
-  const setA = new Set(a);
-  const setB = new Set(b);
-  let intersection = 0;
-  for (const token of setA) {
-    if (setB.has(token)) intersection += 1;
-  }
-  return intersection / (setA.size + setB.size - intersection);
-}
-
-/**
- * Token overlap above which an edit "touches" a rule — close enough that the
- * operator should see the rule before the code lands. Deliberately low: this
- * mode warns, and a warning that never fires is worthless.
- */
-const RULE_OVERLAP_THRESHOLD = 0.22;
+/** Jaccard overlap is unusable here: rule bodies run to 100+ tokens, which
+ * dilutes any edit's score below every meaningful threshold (the live test
+ * fired at 0.103 for a genuinely rule-touching edit). What discriminates is
+ * the rule's coverage of the EDIT plus an absolute shared-token floor.
+ * Validated on 6 live fixtures: the true VSA probe (inter=10, ratio=0.48)
+ * warns; five benign/real edits (inter 0–3) stay silent. */
+const MIN_EDIT_TOKENS = 5;
+const MIN_SHARED_TOKENS = 4;
+const MIN_CONTAINMENT = 0.25;
 
 /**
  * Pure decision: which warnings does this edit deserve?
@@ -78,11 +69,16 @@ export function assessEdit(
     warnings.push(`[UMA Risk] Pain score ${pain.score}/100 — test-first: propose the failing test before changing this file.`);
   }
 
-  const addedTokens = tokenize(addedText);
-  if (addedTokens.length >= 5) {
+  const addedTokens = new Set(tokenize(addedText));
+  if (addedTokens.size >= MIN_EDIT_TOKENS) {
     for (const rule of rules) {
-      const ruleTokens = tokenize(`${rule.title} ${rule.body}`);
-      if (overlap(addedTokens, ruleTokens) >= RULE_OVERLAP_THRESHOLD) {
+      const ruleTokens = new Set(tokenize(`${rule.title} ${rule.body}`));
+      let shared = 0;
+      for (const token of addedTokens) {
+        if (ruleTokens.has(token)) shared += 1;
+      }
+      const containment = shared / addedTokens.size;
+      if (shared >= MIN_SHARED_TOKENS && containment >= MIN_CONTAINMENT) {
         warnings.push(
           `[UMA Rule] This edit may touch active rule ${rule.id} "${rule.title}" — verify compliance before saving.`,
         );

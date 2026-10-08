@@ -57,7 +57,11 @@ fn step_of(fact: &Fact) -> ChainStep {
         title: fact.title.clone(),
         status: fact.status,
         since: fact.validity.since,
-        revised_at: fact.generated.as_ref().map(|g| g.at).unwrap_or(fact.validity.since),
+        revised_at: fact
+            .generated
+            .as_ref()
+            .map(|g| g.at)
+            .unwrap_or(fact.validity.since),
         until: fact.validity.until,
     }
 }

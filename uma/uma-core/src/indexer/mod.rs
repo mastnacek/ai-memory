@@ -35,10 +35,8 @@ impl Indexer {
         // WAL lets readers proceed during writes, and busy_timeout turns a
         // momentary lock into a short wait instead of an immediate
         // SQLITE_BUSY failure.
-        conn.execute_batch(
-            "PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;",
-        )
-        .with_context(|| format!("Failed to set concurrency pragmas on {:?}", db_path))?;
+        conn.execute_batch("PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000;")
+            .with_context(|| format!("Failed to set concurrency pragmas on {:?}", db_path))?;
         let indexer = Self { conn, db_path };
         indexer.init_schema()?;
         Ok(indexer)

@@ -39,21 +39,32 @@ test("medium and critical pain warn with guidance — and never block", () => {
   }
 });
 
-test("an edit touching a rule's vocabulary warns once", () => {
-  const added = `
-    // feature slice calling another slice directly
-    use crate::slices::doctor::checks::inspect_index;
-    import slices into each other instead of the shared kernel
-  `;
+test("an edit genuinely touching a rule's vocabulary warns once (live fixture)", () => {
+  // Validated against the real 22-rule store: inter=10, containment=0.48.
+  const added =
+    "The change mirrors rule vocabulary on purpose: feature slices never import each other directly; shared contracts flow through the shared kernel instead of slice-to-slice imports.";
   const warnings = assessEdit(pain(0, "low"), [vsaRule], added);
   assert.equal(warnings.length, 1);
   assert.ok(warnings[0].includes(vsaRule.id));
   assert.ok(warnings[0].includes(vsaRule.title));
 });
 
+test("benign edits sharing a few words stay silent (live fixtures)", () => {
+  // inter=3 against the closest rule — below the absolute floor.
+  const doc = "Revision history is dated by each fact's generated.at (see the timeline); the claim's since passes through untouched.";
+  assert.deepEqual(assessEdit(pain(0, "low"), [vsaRule], doc), []);
+  // inter=2.
+  const readme = "One-page synthesis of what exists today and what comes next.";
+  assert.deepEqual(assessEdit(pain(0, "low"), [vsaRule], readme), []);
+  // Fewer than the token floor fires nothing at all.
+  assert.deepEqual(assessEdit(pain(0, "low"), [vsaRule], "const x = 1 + 2; // scratch"), []);
+});
+
 test("rule warnings stop at one per edit", () => {
   const secondRule: RuleL1 = { ...vsaRule, id: "01OTHER", title: "Another overlapping rule about slices and kernel" };
-  const added = "slices kernel slices kernel slices kernel import shared";
+  // 5 distinct tokens, all shared with both rules -> both cross the floor,
+  // but the assessment stops after the first hit.
+  const added = "slices kernel import shared directly across the modules";
   const warnings = assessEdit(pain(0, "low"), [vsaRule, secondRule], added);
   assert.equal(warnings.filter((w) => w.includes("[UMA Rule]")).length, 1);
 });

@@ -63,8 +63,7 @@ impl Store {
         if Self::current_project_name().is_some_and(|current| current == project_name) {
             let git_root = Self::find_git_root()?;
             let root = git_root.join(".uma");
-            std::fs::create_dir_all(&root)
-                .context("Failed to create project store directory")?;
+            std::fs::create_dir_all(&root).context("Failed to create project store directory")?;
             return Ok(Self::new(root));
         }
 

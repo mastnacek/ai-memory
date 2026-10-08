@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::Args;
 use std::collections::HashMap;
 use std::str::FromStr;
-use uma_core::consolidate::{analyze, AnalyzeOptions, ContradictionPair, ConsolidationReport};
+use uma_core::consolidate::{analyze, AnalyzeOptions, ConsolidationReport, ContradictionPair};
 use uma_core::domain::{Fact, FactType};
 use uma_core::fastbrain;
 
@@ -118,10 +118,7 @@ pub fn run(args: ConsolidateArgs) -> Result<()> {
 ///
 /// Read-only like everything in this slice — the report is proposals, and
 /// applying one is still a supersession through the modal.
-fn refine_with_judge(
-    report: &mut ConsolidationReport,
-    facts: &[Fact],
-) {
+fn refine_with_judge(report: &mut ConsolidationReport, facts: &[Fact]) {
     let by_id: HashMap<uma_core::domain::FactId, &Fact> = facts.iter().map(|f| (f.id, f)).collect();
     for group in &mut report.duplicate_groups {
         let mut kept = Vec::with_capacity(group.ids.len());
@@ -137,10 +134,16 @@ fn refine_with_judge(
                     kept.push(*id);
                     continue;
                 };
-                let text = format!("{}
-{}", left_fact.title, left_fact.body);
-                let other = format!("{}
-{}", right.title, right.body);
+                let text = format!(
+                    "{}
+{}",
+                    left_fact.title, left_fact.body
+                );
+                let other = format!(
+                    "{}
+{}",
+                    right.title, right.body
+                );
                 match fastbrain::judge_relationship(&text, &other, fastbrain::Judge::Jev) {
                     Ok(judgment) => {
                         if judgment.answer == fastbrain::Relationship::Contradiction {

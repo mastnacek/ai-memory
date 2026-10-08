@@ -131,8 +131,7 @@ fn fact_mentions(fact: &Fact, needle: &str, stem: &str) -> bool {
     // predicate selects SEPARATORS (split cuts where it returns true), so
     // it must reject keepers — the inverse silently tokenized punctuation
     // runs and never matched a stem.
-    text
-        .split(|c: char| !c.is_alphanumeric() && c != '_')
+    text.split(|c: char| !c.is_alphanumeric() && c != '_')
         .any(|token| token == stem)
 }
 
