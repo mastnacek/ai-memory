@@ -67,6 +67,10 @@ impl fmt::Display for Scope {
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum FactType {
     Decision,
+    Preference,
+    Fact,
+    Skill,
+    Correction,
     Pattern,
     Reference,
     Note,
@@ -78,6 +82,10 @@ impl FactType {
     pub fn dir_name(&self) -> &str {
         match self {
             FactType::Decision => "decision",
+            FactType::Preference => "preference",
+            FactType::Fact => "fact",
+            FactType::Skill => "skill",
+            FactType::Correction => "correction",
             FactType::Pattern => "pattern",
             FactType::Reference => "reference",
             FactType::Note => "note",
@@ -100,8 +108,12 @@ impl std::str::FromStr for FactType {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(match s.to_lowercase().as_str() {
+        Ok(match s.trim().to_lowercase().as_str() {
             "decision" => FactType::Decision,
+            "preference" => FactType::Preference,
+            "fact" => FactType::Fact,
+            "skill" => FactType::Skill,
+            "correction" => FactType::Correction,
             "pattern" => FactType::Pattern,
             "reference" => FactType::Reference,
             "note" => FactType::Note,

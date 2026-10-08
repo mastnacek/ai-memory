@@ -3,6 +3,15 @@ target/
 **/*.rs.bk
 Cargo.lock
 
+# Node & Pi Extension
+node_modules/
+dist/
+
+# SQLite index
+*.db
+*.db-shm
+*.db-wal
+
 # IDE
 .idea/
 .vscode/
@@ -13,5 +22,5 @@ Cargo.lock
 .DS_Store
 Thumbs.db
 
-# UMA data
+# UMA local data
 ~/.local/share/uma/

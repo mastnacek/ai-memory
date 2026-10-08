@@ -1,0 +1,40 @@
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { loadConfig } from "./src/shared/config.js";
+import { createExtensionState } from "./src/shared/state.js";
+import { registerTools } from "./src/slices/tools/index.js";
+import { registerCommands } from "./src/slices/commands/index.js";
+
+export default function umaExtension(pi: ExtensionAPI): void {
+  // 1. Guard against subagent recursion
+  if (process.env.PI_SUBAGENT === "true" || Boolean(process.env.PI_CHILD_SESSION)) return;
+
+  // 2. Unsubscribers drain on session_shutdown
+  const unsubscribers: Array<() => void> = [];
+  const track = (res: unknown): void => {
+    if (typeof res === "function") unsubscribers.push(res as () => void);
+  };
+
+  // 3. Initialize state & config
+  const initial = loadConfig(process.cwd());
+  const state = createExtensionState(initial.config, initial.globalFile);
+  state.unsubscribers = unsubscribers;
+
+  // 4. Session lifecycle hooks
+  track(
+    pi.on("session_start", (_event, ctx) => {
+      const refreshed = loadConfig(ctx.cwd);
+      state.config = refreshed.config;
+      state.globalConfigFile = refreshed.globalFile;
+    })
+  );
+
+  pi.on("session_shutdown", () => {
+    while (unsubscribers.length > 0) {
+      unsubscribers.pop()?.();
+    }
+  });
+
+  // 5. Register feature slices
+  registerTools(pi, state);
+  registerCommands(pi, state);
+}

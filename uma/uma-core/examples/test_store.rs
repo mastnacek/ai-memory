@@ -9,7 +9,7 @@ fn main() -> anyhow::Result<()> {
     let store = Store::global()?;
     println!("Store created");
 
-    let mut fact = Fact::new(
+    let fact = Fact::new(
         Scope::Global,
         FactType::Note,
         "test".to_string(),

@@ -112,25 +112,26 @@ They share the **same `uma` binary and store**. No duplication.
 ## 6. Quick-Win Implementation Plan
 
 ### **Week 1: S0 — Core Store + Write/Read**
-- [ ] Rust crate `uma-core`: `Fact` struct, serialization, file layout
-- [ ] Binary `uma` with `uma write --type decision --title "..." --body "..."` and `uma read <id>`
-- [ ] Project detection (git root) → scope `Project::<repo>`
-- [ ] Global scope at `~/.uma/global/`
-- [ ] Pi extension scaffold: registers `uma_write` / `uma_read` tools calling `uma` binary
-- [ ] **Test**: `uma write -t fact -T "test" -b "hello" && uma read <id>` → works in Pi
+- [x] Rust crate `uma-core`: `Fact` struct, serialization, file layout
+- [x] Binary `uma` with `uma write --type decision --title "..." --body "..."` and `uma read <id>`
+- [x] Project detection (git root) → scope `Project::<repo>`
+- [x] Global scope at `~/.uma/global/`
+- [x] Pi extension scaffold: registers `uma_write` / `uma_read` / `uma_list` tools calling `uma` binary
+- [x] **Test**: `uma write -t fact -T "test" -b "hello" && uma read <id>` → works in Pi
 
 ### **Week 2: S1 — Keyword Search (BM25)**
-- [ ] SQLite FTS5 index (`uma-core/indexer.rs`) — auto-updated on write
-- [ ] `uma search "query" --mode keyword --scope project`
-- [ ] Pi tool `uma_search` with `mode: "keyword" | "hybrid"`
-- [ ] **Test**: write 5 facts, search returns correct ones
+- [x] SQLite FTS5 index (`uma-core/src/indexer.rs`) — auto-updated on write
+- [x] `uma search "query" [--scope project|global] [--type type]`
+- [x] Pi tool `uma_search` with BM25 keyword matching
+- [x] **Test**: write facts, search returns BM25-ranked results with snippets
 
 ### **Week 3: S2 — Semantic Search (Vectors via OpenRouter)**
-- [ ] Embedding pipeline: HTTP client → OpenRouter `/embeddings` endpoint → LanceDB
-- [ ] Support multiple models via OpenRouter: `openai/text-embedding-3-large` (3072-dim), `nomic-embed-text` (768-dim), `jina-embeddings-v3` (1024-dim)
-- [ ] `uma search "..." --mode semantic` and `--mode hybrid` (RRF fusion)
-- [ ] Config: `embedding.provider = "openrouter"`, `embedding.model = "openai/text-embedding-3-large"`, `embedding.batch_size = 32`, `embedding.api_key_env = "OPENROUTER_API_KEY"`
-- [ ] **Test**: "how do we auth?" finds "SSH port on staging" fact
+- [x] Embedding pipeline: HTTP client → OpenRouter `/v1/embeddings` endpoint (`qwen/qwen3-embedding-8b` / `openai/text-embedding-3-large`)
+- [x] Vector storage table in centralized SQLite database (`fact_embeddings` in `index.db`)
+- [x] `uma search "..." --mode semantic` and `--mode hybrid` (Reciprocal Rank Fusion RRF)
+- [x] Auto-discovery of API key from `OPENROUTER_API_KEY`, `~/.pi/agent/auth.json`, or `openrouter-accounts.json`
+- [x] Batch vectorization (`uma search --vectorize`)
+- [x] **Test**: verified semantic search & hybrid RRF scoring on real facts via OpenRouter API
 
 ### **Week 4: S3 — Scopes + Fact Types**
 - [ ] Frontmatter schema validation on write

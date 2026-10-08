@@ -15,6 +15,8 @@ hashlink.workspace = true
 walkdir.workspace = true
 directories.workspace = true
 thiserror.workspace = true
+rusqlite.workspace = true
+reqwest.workspace = true
 
 [dev-dependencies]
 tempfile = "3.10"

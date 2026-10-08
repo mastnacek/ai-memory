@@ -1,14 +1,16 @@
 pub mod domain;
+pub mod embeddings;
+pub mod indexer;
+pub mod search;
 pub mod serialization;
 pub mod store;
+pub mod vector_store;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::domain::{Fact, FactId, FactType, Scope, Validity};
+    use crate::domain::{Fact, FactType, Scope};
     use crate::serialization::{fact_to_markdown, markdown_to_fact};
     use crate::store::Store;
-    use chrono::Utc;
     use tempfile::tempdir;
 
     #[test]
@@ -112,5 +114,34 @@ mod tests {
             FactType::Custom("custom-type".to_string()).to_string(),
             "custom-type"
         );
+    }
+
+    #[test]
+    fn test_store_search() -> anyhow::Result<()> {
+        let dir = tempdir()?;
+        let db_path = dir.path().join("index.db");
+        let indexer = crate::indexer::Indexer::open(&db_path)?;
+
+        let fact1 = Fact::new(
+            Scope::Global,
+            FactType::Decision,
+            "Adopt SQLite for FTS5 Indexing".to_string(),
+            "We use embedded SQLite FTS5 for fast BM25 keyword search.".to_string(),
+        );
+        let fact2 = Fact::new(
+            Scope::Global,
+            FactType::Preference,
+            "Rust Tooling".to_string(),
+            "Prefer standard cargo tools.".to_string(),
+        );
+
+        indexer.index_fact(&fact1, None)?;
+        indexer.index_fact(&fact2, None)?;
+
+        let hits = indexer.search_keyword("FTS5", None, None, None, 10)?;
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].id, fact1.id);
+        assert_eq!(hits[0].title, "Adopt SQLite for FTS5 Indexing");
+        Ok(())
     }
 }

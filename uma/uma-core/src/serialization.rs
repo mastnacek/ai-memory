@@ -5,8 +5,6 @@ use hashlink::LinkedHashMap;
 use std::str::FromStr;
 use yaml_rust2::{Yaml, YamlEmitter};
 
-const FRONTMATTER_DELIMITER: &str = "---\n";
-
 pub fn fact_to_markdown(fact: &Fact) -> Result<String> {
     let mut yaml = Yaml::Hash(LinkedHashMap::new());
 
@@ -65,10 +63,7 @@ pub fn fact_to_markdown(fact: &Fact) -> Result<String> {
     // YamlEmitter may emit a leading '---' document start marker; strip it
     let frontmatter_str = frontmatter_str.trim_start_matches("---\n").trim();
 
-    Ok(format!(
-        "{}{}\n{}\n{}",
-        FRONTMATTER_DELIMITER, frontmatter_str, FRONTMATTER_DELIMITER, fact.body
-    ))
+    Ok(format!("---\n{}\n---\n{}", frontmatter_str, fact.body))
 }
 
 pub fn markdown_to_fact(content: &str) -> Result<Fact> {
@@ -131,14 +126,33 @@ pub fn markdown_to_fact(content: &str) -> Result<Fact> {
 }
 
 fn split_frontmatter(content: &str) -> Option<(&str, &str)> {
-    if !content.starts_with(FRONTMATTER_DELIMITER) {
+    let trimmed = content.trim_start();
+    if !trimmed.starts_with("---") {
         return None;
     }
-    let after_first = &content[FRONTMATTER_DELIMITER.len()..];
-    let end_pos = after_first.find(FRONTMATTER_DELIMITER)?;
-    let frontmatter = &after_first[..end_pos];
-    let body = &after_first[end_pos + FRONTMATTER_DELIMITER.len()..];
-    Some((frontmatter, body))
+    let first_line_end = trimmed.find('\n')?;
+    let rest = &trimmed[first_line_end + 1..];
+
+    let mut search_idx = 0;
+    while let Some(pos) = rest[search_idx..].find("---") {
+        let abs_pos = search_idx + pos;
+        let is_line_start = abs_pos == 0
+            || rest.as_bytes()[abs_pos - 1] == b'\n'
+            || (abs_pos >= 2 && &rest[abs_pos - 2..abs_pos] == "\r\n");
+
+        if is_line_start {
+            let frontmatter = &rest[..abs_pos].trim_end_matches(['\r', '\n']);
+            let after_closing = &rest[abs_pos + 3..];
+            let body_start = after_closing
+                .find('\n')
+                .map(|idx| idx + 1)
+                .unwrap_or(after_closing.len());
+            let body = &after_closing[body_start..];
+            return Some((frontmatter, body));
+        }
+        search_idx = abs_pos + 3;
+    }
+    None
 }
 
 fn parse_scope(s: &str) -> Result<Scope> {

@@ -18,6 +18,8 @@ walkdir = "2.5"
 directories = "5.0"
 thiserror = "1.0"
 tempfile = "3.10"
+rusqlite = { version = "0.32", features = ["bundled"] }
+reqwest = { version = "0.12", features = ["json", "blocking"] }
 
 [workspace.package]
 version = "0.1.0"
