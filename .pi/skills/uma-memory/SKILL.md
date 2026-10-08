@@ -47,8 +47,18 @@ When calling `uma_write` or executing `uma write`:
 
 ## 3. Tool Reference (Pi Agent Tools)
 
+### `uma_search`
+Search memory facts using hybrid BM25 + semantic vector matching (RRF):
+```json
+{
+  "query": "how do we isolate slices in VSA architecture?",
+  "mode": "hybrid",
+  "limit": 5
+}
+```
+
 ### `uma_write`
-Store a structured fact:
+Store a structured fact (in interactive mode, prompts the user via a TUI modal review window):
 ```json
 {
   "type": "decision",
@@ -60,7 +70,7 @@ Store a structured fact:
 ```
 
 ### `uma_list`
-Query available memories before designing new features:
+Query available memories by scope and type:
 ```json
 {
   "scope": "project",
@@ -81,8 +91,16 @@ Retrieve the full body and metadata of a specific fact:
 ## 4. CLI Reference
 
 ```bash
+# Hybrid search (BM25 + Semantic OpenRouter embeddings)
+uma search "how do we structure code" --mode hybrid
+uma search "reqwest" --mode keyword
+uma search "error handling conventions" --mode semantic
+
+# Vectorize all missing embeddings
+uma search --vectorize
+
 # Store project decision
-uma write --type decision --title "Use SQLite for BM25 Index" --body "Store FTS5 index in .uma/index.db." --tags search,sqlite
+uma write --type decision --title "Use SQLite for BM25 Index" --body "Store FTS5 index in user profile." --tags search,sqlite
 
 # Store global user preference
 uma write --scope global --type preference --title "Preferred UI Library" --body "Always use Ratatui for terminal interfaces."
