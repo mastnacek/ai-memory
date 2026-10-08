@@ -94,7 +94,8 @@ ai-memory/
                 ├── export/     # S8: OKF bundle / JSON export
                 ├── doctor/     # S8: read-only health report
                 ├── sync/       # S8: git-backed sync of the global store
-                └── scopes/     # cross-project scope discovery (read-only)
+                ├── scopes/     # cross-project scope discovery (read-only)
+                └── sessions/   # S9: session browser over pi/claude stores (read-only)
                 # every slice folder = mod.rs (+ helpers) + README.md
 ```
 

@@ -5,6 +5,7 @@ pub mod health;
 pub mod indexer;
 pub mod search;
 pub mod serialization;
+pub mod sources;
 pub mod similarity;
 pub mod skill;
 pub mod store;

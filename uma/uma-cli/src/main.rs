@@ -58,6 +58,9 @@ enum Commands {
 
     /// List the memory scopes that exist (cross-project discovery)
     Scopes(slices::scopes::ScopesArgs),
+
+    /// Browse the pi and Claude Code session stores (read-only)
+    Sessions(slices::sessions::SessionsArgs),
 }
 
 fn main() -> Result<()> {
@@ -78,5 +81,6 @@ fn main() -> Result<()> {
         Commands::Doctor(args) => slices::doctor::run(args),
         Commands::Sync(args) => slices::sync::run(args),
         Commands::Scopes(args) => slices::scopes::run(args),
+        Commands::Sessions(args) => slices::sessions::run(args),
     }
 }

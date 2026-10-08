@@ -7,6 +7,7 @@ pub mod migrate;
 pub mod read;
 pub mod scopes;
 pub mod search;
+pub mod sessions;
 pub mod skill;
 pub mod supersede;
 pub mod sync;
