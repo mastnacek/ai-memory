@@ -9,7 +9,7 @@ tags:
   - pi
   - layout
   - discovery
-status: stable
+status: deprecated
 supersedes: 01M4DDVAGB5J585S34G7VSW96F
 generated:
   by: pi-agent/1.1
@@ -18,6 +18,7 @@ verified:
   - by: "human:operator"
     at: "2026-10-08T09:53:57.217080200+00:00"
 since: "2026-10-08T09:53:57.217427300+00:00"
+until: "2026-10-09T11:51:51.907020200+00:00"
 ---
 ### Context
 An earlier pattern described a single skill at `skills/uma-memory/` loaded into Pi via `.pi/settings.json` (`"skills": ["../skills"]`), on the premise that duplicating the skill was the problem. That premise was wrong: the real requirement is two *different* documents for two audiences.

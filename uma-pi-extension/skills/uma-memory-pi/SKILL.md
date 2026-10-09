@@ -6,9 +6,10 @@ description: Use UMA memory from the Pi agent — native uma_write/read/list/sea
 # UMA Memory Skill (Pi agent)
 
 This is the **Pi-specific** companion to the harness-agnostic UMA skill. Read the general skill
-at `skills/uma-memory/SKILL.md` for the portable material — capture triggers, quality standards,
-the OKF v0.2 frontmatter table, lifecycle semantics, and the full CLI reference. **This file adds
-only what is specific to driving UMA from Pi.**
+— the `uma-memory` skill, canonical at the repo root (`skills/uma-memory/SKILL.md`) and shipped
+alongside this file in the Pi package — for the portable material: capture triggers, quality
+standards, the OKF v0.2 frontmatter table, lifecycle semantics, and the full CLI reference.
+**This file adds only what is specific to driving UMA from Pi.**
 
 > **Do not merge the two skills.** The general file must stay usable by agents that have no Pi
 > tools; this file may assume Pi's tool names, approval UI, and slash commands.
