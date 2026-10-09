@@ -10,7 +10,7 @@ This document defines the architectural guidelines, development standards, and r
 - **Not a Pure Pi Plugin**: UMA is an independent, standalone memory platform written in **Rust** with multi-client delivery:
   - **Standalone CLI (`uma`)**: Direct terminal interface and agent scripting.
   - **Universal MCP Server (stdio JSON-RPC)**: Integrates seamlessly with Claude Code, Cursor, OpenCode, Codex, and any MCP-compliant client.
-  - **Pi Extension (separate repository: [mastnacek/pi-uma](https://github.com/mastnacek/pi-uma), local: `D:_programovani\pi\plugins\pi-uma`)**: VSA TypeScript plugin providing native Pi tools (`uma_write`, `uma_read`, `uma_list`, `uma_search`, `uma_supersede`), a fail-closed approval gate, an interactive approval modal, and `/uma` slash commands.
+  - **Pi Extension (separate repository: [mastnacek/pi-uma](https://github.com/mastnacek/pi-uma), local: `D:/01_programovani/pi/plugins/pi-uma`)**: VSA TypeScript plugin providing native Pi tools (`uma_write`, `uma_read`, `uma_list`, `uma_search`, `uma_supersede`), a fail-closed approval gate, an interactive approval modal, and `/uma` slash commands.
 
 ---
 
