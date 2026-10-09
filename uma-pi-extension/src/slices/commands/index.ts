@@ -4,6 +4,7 @@ import { runUma, findUmaBinary } from "../../shared/client.js";
 import { stringsFor, normalizeLocale } from "../../shared/i18n.js";
 import { saveConfig } from "../../shared/config.js";
 import { getUmaCompletions } from "./complete.js";
+import { translateOutputForDisplay } from "../../shared/translate_client.js";
 
 export function registerCommands(pi: ExtensionAPI, state: ExtensionState): void {
   const s = stringsFor(state.config.lang);
@@ -20,6 +21,21 @@ export function registerCommands(pi: ExtensionAPI, state: ExtensionState): void 
       const cleanParts = parts.filter((p) => p !== "--global");
       const subcommand = cleanParts[0]?.toLowerCase() || "list";
 
+      // Fact views translate for display (all fact displays). One model
+      // call per command; memory and CLI output stay untouched — the note
+      // says so explicitly.
+      const showOutput = async (text: string): Promise<void> => {
+        const { text: shown, failed } = await translateOutputForDisplay(
+          ctx, text, state.config.lang,
+        );
+        const note = failed
+          ? `${liveStrings.translationFailedNote} (${failed})`
+          : shown === text
+            ? undefined
+            : liveStrings.displayTranslatedNote;
+        ctx.ui.notify(note ? `${note}\n\n${shown}` : shown, "info");
+      };
+
       if (subcommand === "search") {
         const query = cleanParts.slice(1).join(" ");
         if (!query) {
@@ -27,16 +43,16 @@ export function registerCommands(pi: ExtensionAPI, state: ExtensionState): void 
           return;
         }
         const res = await runUma(binPath, ["search", query], ctx.cwd);
-        ctx.ui.notify(res.stdout || res.stderr || liveStrings.noFactsFound, "info");
+        await showOutput(res.stdout || res.stderr || liveStrings.noFactsFound);
       } else if (subcommand === "list") {
         const scope = cleanParts[1];
         const cmdArgs = ["list"];
         if (scope) cmdArgs.push("--scope", scope);
         const res = await runUma(binPath, cmdArgs, ctx.cwd);
-        ctx.ui.notify(res.stdout || liveStrings.noFactsFound, "info");
+        await showOutput(res.stdout || liveStrings.noFactsFound);
       } else if (subcommand === "read" && cleanParts[1]) {
         const res = await runUma(binPath, ["read", cleanParts[1]], ctx.cwd);
-        ctx.ui.notify(res.stdout || res.stderr, "info");
+        await showOutput(res.stdout || res.stderr);
       } else if (subcommand === "reindex") {
         const res = await runUma(binPath, ["search", "", "--reindex"], ctx.cwd);
         ctx.ui.notify(res.stdout || liveStrings.reindexDone, "info");

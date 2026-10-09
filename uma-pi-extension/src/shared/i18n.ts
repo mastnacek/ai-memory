@@ -56,6 +56,7 @@ export interface Strings {
   translatingNote: string;
   translatedNote: string;
   translationFailedNote: string;
+  displayTranslatedNote: string;
 }
 
 const STRINGS: Record<Locale, Strings> = {
@@ -76,6 +77,7 @@ const STRINGS: Record<Locale, Strings> = {
     translatingNote: "🌐 translating for display… (the original is stored)",
     translatedNote: "🌐 display translation — the ORIGINAL is saved (c: original)",
     translationFailedNote: "🌐 translation unavailable — showing the original",
+    displayTranslatedNote: "🌐 display translation — memory and CLI output unchanged",
     editPromptTitle: "Edit Title:",
     editPromptBody: "Edit Content (Markdown):",
     editPromptTags: "Edit Tags (comma-separated):",
@@ -132,6 +134,7 @@ const STRINGS: Record<Locale, Strings> = {
     translatingNote: "🌐 překládám pro zobrazení… (ukládá se originál)",
     translatedNote: "🌐 zobrazený překlad — ukládá se ORIGINÁL (c: originál)",
     translationFailedNote: "🌐 překlad nedostupný — zobrazuje se originál",
+    displayTranslatedNote: "🌐 zobrazený překlad — pamět i výstup CLI se nemění",
     editPromptTitle: "Upravit název:",
     editPromptBody: "Upravit obsah (Markdown):",
     editPromptTags: "Upravit tagy (oddělené čárkou):",

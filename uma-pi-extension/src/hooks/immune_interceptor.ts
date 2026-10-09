@@ -112,7 +112,7 @@ export function registerImmuneInterceptor(pi: ExtensionAPI, state: ExtensionStat
           // call with the reason — consented blocking, the consent model
           // intact.
           if (action.message.length > 0) {
-            const proceed = await ctx.ui.confirm("UMA immune interceptor", action.message);
+            const proceed = await ctx.ui.confirm("🛡️ UMA immune interceptor", action.message);
             if (proceed === false) {
               return { block: true, reason: action.message };
             }

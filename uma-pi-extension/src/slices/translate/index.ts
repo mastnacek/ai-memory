@@ -10,6 +10,7 @@
 import type { Api, AssistantMessage, Context, Model } from "@earendil-works/pi-ai";
 import { completeSimple } from "@earendil-works/pi-ai/compat";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { resolveTranslateModel } from "./model.js";
 
 import { buildTranslateContext } from "./prompt.js";
 export { buildTranslateContext };
@@ -32,8 +33,9 @@ export async function translateForDisplay(
   body: string,
 ): Promise<DisplayTranslationResult> {
   try {
-    const model = ctx.model as Model<Api> | undefined;
-    if (!model) return { error: "no active model" };
+    // Shared knob: the translate plugin's configured model (cheap flash),
+    // degrading to the session's current model (see model.ts).
+    const model = await resolveTranslateModel(ctx);
     const auth = await ctx.modelRegistry.getApiKeyAndHeaders(model);
     if (!auth.ok) return { error: auth.error };
 
@@ -141,4 +143,24 @@ export class DisplayTranslation {
       ? this.text
       : original;
   }
+}
+
+/**
+ * Display translation for /uma read, search and list output.
+ *
+ * One model call per command: the WHOLE output block (a fact body, or the
+ * combined snippet list) goes through the same prompt contract as the
+ * modal. Display-only by the same invariant — memory, CLI output and the
+ * index stay untouched; a failure degrades to the original text with the
+ * reason attached, never a partial or dropped view.
+ */
+export async function translateOutputForDisplay(
+  ctx: ExtensionContext,
+  text: string,
+  lang: "cs" | "en",
+): Promise<{ text: string; failed?: string }> {
+  if (lang !== "cs" || text.trim().length < 80) return { text };
+  const result = await translateForDisplay(ctx, text);
+  if (result.text) return { text: result.text };
+  return { text, failed: result.error };
 }
