@@ -145,8 +145,8 @@ duplicated — do not merge them, and do not copy one into the other:
 
 | Skill | Path | Audience | May contain |
 | :--- | :--- | :--- | :--- |
-| **General** | `skills/uma-memory/SKILL.md` (mirror shipped in the pi-uma package) | any skill-reading agent (CLI / MCP) | only portable material: capture triggers, quality, OKF v0.2, lifecycle, `uma` CLI. **No harness-specific tools, UIs, or commands.** |
-| **Pi** | `skills/uma-memory-pi/SKILL.md` in the pi-uma repository (installed globally with the Pi package) | the Pi agent | Pi-only deltas: `uma_*` tools, approval modal, approval gate, `/uma` commands, `auto-approve`, reload rule. |
+| **General** | `skills/uma-memory/SKILL.md` (canonical, this repository) | any skill-reading agent (CLI / MCP) | only portable material: capture triggers, quality, OKF v0.2, lifecycle, `uma` CLI. **No harness-specific tools, UIs, or commands.** |
+| **Pi** | `skills/uma-memory-pi/SKILL.md` in the pi-uma repository — single self-sufficient skill (portable essentials folded in), installed globally from GitHub | the Pi agent | Pi-only deltas: `uma_*` tools, approval modal, approval gate, `/uma` commands, `auto-approve`, reload rule. |
 
 The general file must stay correct for an agent that has no Pi tools; naming a Pi-only tool there
 would make that agent hunt for something that does not exist. The Pi skill references the general
