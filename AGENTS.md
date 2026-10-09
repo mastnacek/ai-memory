@@ -10,7 +10,7 @@ This document defines the architectural guidelines, development standards, and r
 - **Not a Pure Pi Plugin**: UMA is an independent, standalone memory platform written in **Rust** with multi-client delivery:
   - **Standalone CLI (`uma`)**: Direct terminal interface and agent scripting.
   - **Universal MCP Server (stdio JSON-RPC)**: Integrates seamlessly with Claude Code, Cursor, OpenCode, Codex, and any MCP-compliant client.
-  - **Pi Extension (`uma-pi-extension`)**: VSA TypeScript plugin providing native Pi tools (`uma_write`, `uma_read`, `uma_list`, `uma_search`, `uma_supersede`), a fail-closed approval gate, an interactive approval modal, and `/uma` slash commands.
+  - **Pi Extension (separate repository: [mastnacek/pi-uma](https://github.com/mastnacek/pi-uma), local: `D:_programovani\pi\plugins\pi-uma`)**: VSA TypeScript plugin providing native Pi tools (`uma_write`, `uma_read`, `uma_list`, `uma_search`, `uma_supersede`), a fail-closed approval gate, an interactive approval modal, and `/uma` slash commands.
 
 ---
 
@@ -32,7 +32,7 @@ This project strictly adopts and enforces **Vertical Slice Architecture (VSA)** 
 3. **Feature Slices (`uma-cli/src/slices/<feature>/`, holding `mod.rs` + `README.md`)**:
    - Each slice encapsulates **one complete, user-visible capability end-to-end**: CLI arguments definition, business logic, storage mutations, validation, and presentation.
    - **Inviolable Slice Boundary**: **Slices NEVER import each other directly.** All shared contracts and types flow through `uma-core` or `src/shared/`.
-   - **Every slice folder documents itself**: `slices/<feature>/README.md` states what the slice does, why it exists, and the invariant it must not break (concise — what + why, roughly 15-30 lines). This applies to both the Rust CLI and `uma-pi-extension/src/slices/`. A slice without its `README.md` is incomplete.
+   - **Every slice folder documents itself**: `slices/<feature>/README.md` states what the slice does, why it exists, and the invariant it must not break (concise — what + why, roughly 15-30 lines). This applies to both the Rust CLI and the Pi plugin's `src/slices/` (pi-uma repository). A slice without its `README.md` is incomplete.
 
 4. **File Length Limits**:
    - Source files must remain at or below **400 lines** (soft target 300 lines).
@@ -145,8 +145,8 @@ duplicated — do not merge them, and do not copy one into the other:
 
 | Skill | Path | Audience | May contain |
 | :--- | :--- | :--- | :--- |
-| **General** | `skills/uma-memory/SKILL.md` (mirror: `uma-pi-extension/skills/uma-memory/`) | any skill-reading agent (CLI / MCP) | only portable material: capture triggers, quality, OKF v0.2, lifecycle, `uma` CLI. **No harness-specific tools, UIs, or commands.** |
-| **Pi** | `uma-pi-extension/skills/uma-memory-pi/SKILL.md` (installed globally with the Pi package) | the Pi agent | Pi-only deltas: `uma_*` tools, approval modal, approval gate, `/uma` commands, `auto-approve`, reload rule. |
+| **General** | `skills/uma-memory/SKILL.md` (mirror shipped in the pi-uma package) | any skill-reading agent (CLI / MCP) | only portable material: capture triggers, quality, OKF v0.2, lifecycle, `uma` CLI. **No harness-specific tools, UIs, or commands.** |
+| **Pi** | `skills/uma-memory-pi/SKILL.md` in the pi-uma repository (installed globally with the Pi package) | the Pi agent | Pi-only deltas: `uma_*` tools, approval modal, approval gate, `/uma` commands, `auto-approve`, reload rule. |
 
 The general file must stay correct for an agent that has no Pi tools; naming a Pi-only tool there
 would make that agent hunt for something that does not exist. The Pi skill references the general
@@ -154,7 +154,7 @@ file by path and adds only what is Pi-specific.
 
 ### Approval gate (fail-closed)
 
-A `tool_call` hook (`uma-pi-extension/src/hooks/approval_gate.ts`) guards every memory-mutating
+A `tool_call` hook (`src/hooks/approval_gate.ts` in the pi-uma repository) guards every memory-mutating
 tool (`uma_write`, `uma_supersede`, `uma_consolidate`). A mutation is allowed only when an
 interactive approval UI exists (the tool then shows its modal) **or** the operator enabled
 auto-approval. In `pi -p`, RPC, JSON, or nested `codemode` calls the write is blocked.
